@@ -28,7 +28,7 @@ class ScenarioManager {
     document.getElementById('new-project').addEventListener('click', () => this.newProject());
     document.getElementById('save-project').addEventListener('click', () => this.saveProject());
     document.getElementById('open-project').addEventListener('click', () => this.openProject());
-    document.getElementById('export-json').addEventListener('click', () => this.exportJSON());
+    document.getElementById('export-csv').addEventListener('click', () => this.exportCSV());
     document.getElementById('preview-novel').addEventListener('click', () => this.previewManager.showPreview());
     document.getElementById('reload-schema').addEventListener('click', () => this.reloadSchema());
     
@@ -129,9 +129,9 @@ class ScenarioManager {
     }
   }
 
-  async exportJSON() {
+  async exportCSV() {
     const paragraphs = this.paragraphManager.getParagraphs();
-    await this.projectManager.exportJSON(paragraphs);
+    await this.projectManager.exportCSV(paragraphs, this.blockTypeManager);
   }
 
   onTypeChange() {

@@ -89,13 +89,13 @@ ipcMain.handle('open-project', async (event) => {
   }
 });
 
-ipcMain.handle('export-json', async (event, exportData) => {
+ipcMain.handle('export-csv', async (event, csvData) => {
   try {
     const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'JSONエクスポート',
-      defaultPath: 'シナリオ_export.json',
+      title: 'CSVエクスポート',
+      defaultPath: 'シナリオ_export.csv',
       filters: [
-        { name: 'JSON Files', extensions: ['json'] },
+        { name: 'CSV Files', extensions: ['csv'] },
         { name: 'All Files', extensions: ['*'] }
       ]
     });
@@ -104,7 +104,7 @@ ipcMain.handle('export-json', async (event, exportData) => {
       return { success: false };
     }
     
-    await fs.writeFile(result.filePath, JSON.stringify(exportData, null, 2), 'utf8');
+    await fs.writeFile(result.filePath, csvData, 'utf8');
     
     return { success: true, path: result.filePath };
   } catch (error) {
