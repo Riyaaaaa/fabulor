@@ -21,14 +21,14 @@
     
     <main>
       <div class="sidebar">
-        <h2>段落リスト</h2>
+        <h2>ブロックリスト</h2>
         <div id="paragraph-list" class="paragraph-list"></div>
-        <button id="add-paragraph" class="add-button">+ 新規段落</button>
+        <button id="add-paragraph" class="add-button">+ 新規ブロック</button>
       </div>
       
       <div class="editor">
         <div id="editor-placeholder" class="placeholder">
-          段落を選択するか、新規段落を作成してください
+          ブロックを選択するか、新規ブロックを作成してください
         </div>
         <div id="editor-container" class="editor-container" style="display: none;">
           <div class="editor-header">
@@ -40,28 +40,14 @@
             <label>
               タイプ:
               <select id="type-select" class="type-select">
-                <option value="narrative">ナレーション</option>
                 <option value="dialogue">セリフ</option>
-                <option value="description">描写</option>
-                <option value="action">アクション</option>
-                <option value="thought">心理描写</option>
+                <option value="narrative">地の文</option>
+                <option value="command">コマンド</option>
               </select>
             </label>
             
-            <!-- ナレーション用パラメータ -->
-            <div id="narrative-params" class="type-params">
-              <label>
-                視点:
-                <select id="narrative-perspective">
-                  <option value="third">三人称</option>
-                  <option value="first">一人称</option>
-                  <option value="omniscient">神視点</option>
-                </select>
-              </label>
-            </div>
-            
             <!-- セリフ用パラメータ -->
-            <div id="dialogue-params" class="type-params" style="display: none;">
+            <div id="dialogue-params" class="type-params">
               <label>
                 話者:
                 <input type="text" id="speaker-input" placeholder="キャラクター名">
@@ -78,63 +64,48 @@
                   <option value="excited">興奮</option>
                 </select>
               </label>
-              <label>
-                音量:
-                <select id="volume-select">
-                  <option value="normal">普通</option>
-                  <option value="whisper">ささやき</option>
-                  <option value="loud">大声</option>
-                  <option value="shout">叫び</option>
-                </select>
-              </label>
             </div>
             
-            <!-- 描写用パラメータ -->
-            <div id="description-params" class="type-params" style="display: none;">
-              <label>
-                対象:
-                <input type="text" id="description-target" placeholder="人物、場所、物など">
-              </label>
-              <label>
-                詳細度:
-                <select id="detail-level">
-                  <option value="brief">簡潔</option>
-                  <option value="normal">普通</option>
-                  <option value="detailed">詳細</option>
-                </select>
-              </label>
+            <!-- 地の文用パラメータ -->
+            <div id="narrative-params" class="type-params" style="display: none;">
+              <p class="type-info">地の文には追加設定項目はありません</p>
             </div>
             
-            <!-- アクション用パラメータ -->
-            <div id="action-params" class="type-params" style="display: none;">
+            <!-- コマンド用パラメータ -->
+            <div id="command-params" class="type-params" style="display: none;">
               <label>
-                主体:
-                <input type="text" id="action-subject" placeholder="アクションを行う人物">
-              </label>
-              <label>
-                速度:
-                <select id="action-speed">
-                  <option value="slow">ゆっくり</option>
-                  <option value="normal">普通</option>
-                  <option value="fast">素早く</option>
-                  <option value="instant">瞬間的</option>
+                コマンドタイプ:
+                <select id="command-type">
+                  <option value="screen">画面演出</option>
+                  <option value="sound">音響効果</option>
+                  <option value="transition">画面転換</option>
+                  <option value="wait">待機</option>
+                  <option value="system">システム</option>
+                  <option value="custom">カスタム</option>
                 </select>
               </label>
-            </div>
-            
-            <!-- 心理描写用パラメータ -->
-            <div id="thought-params" class="type-params" style="display: none;">
               <label>
-                対象:
-                <input type="text" id="thought-character" placeholder="思考する人物">
+                効果:
+                <select id="command-effect">
+                  <option value="shake">画面揺れ</option>
+                  <option value="flash">フラッシュ</option>
+                  <option value="fade">フェード</option>
+                  <option value="zoom">ズーム</option>
+                  <option value="blur">ブラー</option>
+                  <option value="none">なし</option>
+                </select>
               </label>
               <label>
-                深度:
-                <select id="thought-depth">
-                  <option value="surface">表面的</option>
-                  <option value="normal">普通</option>
-                  <option value="deep">深層心理</option>
+                強度:
+                <select id="command-intensity">
+                  <option value="weak">弱</option>
+                  <option value="normal">中</option>
+                  <option value="strong">強</option>
                 </select>
+              </label>
+              <label>
+                継続時間:
+                <input type="number" id="command-duration" placeholder="秒数" step="0.1" min="0">
               </label>
             </div>
             

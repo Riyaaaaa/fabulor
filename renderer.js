@@ -3,11 +3,54 @@ class ScenarioManager {
     this.paragraphs = [];
     this.selectedParagraphId = null;
     this.projectPath = null;
+    this.blockTypes = {};
     
-    this.initializeUI();
-    this.bindEvents();
+    this.loadBlockTypes().then(() => {
+      this.initializeUI();
+      this.bindEvents();
+      this.updateTitle();
+    });
   }
   
+  async loadBlockTypes() {
+    try {
+      const result = await window.electronAPI.loadBlockTypes();
+      if (result.success) {
+        this.blockTypes = result.data.block_types;
+      } else {
+        console.error('スキーマファイルの読み込みに失敗:', result.error);
+        // フォールバック用のデフォルト設定
+        this.blockTypes = {
+          dialogue: { label: 'セリフ', requires_text: true, parameters: {} },
+          narrative: { label: '地の文', requires_text: true, parameters: {} },
+          command: { label: 'コマンド', requires_text: false, parameters: {} }
+        };
+      }
+    } catch (error) {
+      console.error('スキーマファイル読み込みエラー:', error);
+    }
+  }
+
+  async loadSchemaFile(projectPath, schemaFileName) {
+    try {
+      const result = await window.electronAPI.loadSchemaFile(projectPath, schemaFileName);
+      if (result.success) {
+        this.blockTypes = result.data.block_types;
+      } else {
+        console.error('スキーマファイルの読み込みに失敗:', result.error);
+        alert(`スキーマファイル "${schemaFileName}" の読み込みに失敗しました。デフォルト設定を使用します。`);
+        // フォールバック用のデフォルト設定
+        this.blockTypes = {
+          dialogue: { label: 'セリフ', requires_text: true, parameters: {} },
+          narrative: { label: '地の文', requires_text: true, parameters: {} },
+          command: { label: 'コマンド', requires_text: false, parameters: {} }
+        };
+      }
+    } catch (error) {
+      console.error('スキーマファイル読み込みエラー:', error);
+    }
+  }
+
   generateGUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0;
@@ -16,7 +59,7 @@ class ScenarioManager {
     });
   }
   
-  createParagraph(text = '', type = 'narrative', params = {}, tags = []) {
+  createParagraph(text = '', type = 'dialogue', params = {}, tags = []) {
     const baseData = {
       id: this.generateGUID(),
       text: text,
@@ -26,40 +69,15 @@ class ScenarioManager {
       updatedAt: new Date().toISOString()
     };
     
-    switch (type) {
-      case 'dialogue':
-        return {
-          ...baseData,
-          speaker: params.speaker || '',
-          emotion: params.emotion || '',
-          volume: params.volume || 'normal'
-        };
-      case 'narrative':
-        return {
-          ...baseData,
-          perspective: params.perspective || 'third'
-        };
-      case 'description':
-        return {
-          ...baseData,
-          target: params.target || '',
-          detailLevel: params.detailLevel || 'normal'
-        };
-      case 'action':
-        return {
-          ...baseData,
-          subject: params.subject || '',
-          speed: params.speed || 'normal'
-        };
-      case 'thought':
-        return {
-          ...baseData,
-          character: params.character || '',
-          depth: params.depth || 'normal'
-        };
-      default:
-        return baseData;
+    // ブロックタイプ定義からデフォルト値を設定
+    const blockType = this.blockTypes[type];
+    if (blockType && blockType.parameters) {
+      Object.entries(blockType.parameters).forEach(([paramName, paramDef]) => {
+        baseData[paramName] = params[paramName] || paramDef.default || '';
+      });
     }
+    
+    return baseData;
   }
   
   initializeUI() {
@@ -71,42 +89,89 @@ class ScenarioManager {
     this.tagsInput = document.getElementById('tags-input');
     
     this.typeSelect = document.getElementById('type-select');
-    this.typeParamContainers = {
-      narrative: document.getElementById('narrative-params'),
-      dialogue: document.getElementById('dialogue-params'),
-      description: document.getElementById('description-params'),
-      action: document.getElementById('action-params'),
-      thought: document.getElementById('thought-params')
-    };
-    
-    this.typeParams = {
-      narrative: {
-        perspective: document.getElementById('narrative-perspective')
-      },
-      dialogue: {
-        speaker: document.getElementById('speaker-input'),
-        emotion: document.getElementById('emotion-select'),
-        volume: document.getElementById('volume-select')
-      },
-      description: {
-        target: document.getElementById('description-target'),
-        detailLevel: document.getElementById('detail-level')
-      },
-      action: {
-        subject: document.getElementById('action-subject'),
-        speed: document.getElementById('action-speed')
-      },
-      thought: {
-        character: document.getElementById('thought-character'),
-        depth: document.getElementById('thought-depth')
-      }
-    };
-    
     this.previewModal = document.getElementById('preview-modal');
     this.previewContent = document.getElementById('preview-content');
     this.previewFormat = document.getElementById('preview-format');
+    
+    // ブロックタイプ定義からUIを動的生成
+    this.generateTypeUI();
   }
   
+  generateTypeUI() {
+    // タイプセレクトのオプションを生成
+    this.typeSelect.innerHTML = '';
+    Object.entries(this.blockTypes).forEach(([typeKey, typeDef]) => {
+      const option = document.createElement('option');
+      option.value = typeKey;
+      option.textContent = typeDef.label;
+      this.typeSelect.appendChild(option);
+    });
+
+    // 既存のパラメータコンテナを削除
+    const existingContainers = document.querySelectorAll('.type-params');
+    existingContainers.forEach(container => container.remove());
+
+    // 新しいパラメータコンテナを動的生成
+    this.typeParamContainers = {};
+    this.typeParams = {};
+    const metadataDiv = document.querySelector('.metadata');
+
+    Object.entries(this.blockTypes).forEach(([typeKey, typeDef]) => {
+      // パラメータコンテナを作成
+      const container = document.createElement('div');
+      container.id = `${typeKey}-params`;
+      container.className = 'type-params';
+      container.style.display = 'none';
+
+      this.typeParamContainers[typeKey] = container;
+      this.typeParams[typeKey] = {};
+
+      if (Object.keys(typeDef.parameters).length === 0) {
+        // パラメータがない場合は情報メッセージを表示
+        const infoP = document.createElement('p');
+        infoP.className = 'type-info';
+        infoP.textContent = `${typeDef.label}には追加設定項目はありません`;
+        container.appendChild(infoP);
+      } else {
+        // パラメータがある場合は入力要素を生成
+        Object.entries(typeDef.parameters).forEach(([paramKey, paramDef]) => {
+          const label = document.createElement('label');
+          label.textContent = paramDef.label + ':';
+
+          let inputElement;
+          if (paramDef.type === 'text') {
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.placeholder = paramDef.placeholder || '';
+          } else if (paramDef.type === 'number') {
+            inputElement = document.createElement('input');
+            inputElement.type = 'number';
+            inputElement.placeholder = paramDef.placeholder || '';
+            if (paramDef.min !== undefined) inputElement.min = paramDef.min;
+            if (paramDef.step !== undefined) inputElement.step = paramDef.step;
+          } else if (paramDef.type === 'select') {
+            inputElement = document.createElement('select');
+            paramDef.options.forEach(option => {
+              const optionElement = document.createElement('option');
+              optionElement.value = option.value;
+              optionElement.textContent = option.label;
+              inputElement.appendChild(optionElement);
+            });
+          }
+
+          inputElement.id = `${typeKey}-${paramKey}`;
+          this.typeParams[typeKey][paramKey] = inputElement;
+
+          label.appendChild(inputElement);
+          container.appendChild(label);
+        });
+      }
+
+      // タグ入力の前に挿入
+      metadataDiv.insertBefore(container, document.querySelector('label:last-child'));
+    });
+  }
+
   bindEvents() {
     document.getElementById('add-paragraph').addEventListener('click', () => this.addParagraph());
     document.getElementById('delete-paragraph').addEventListener('click', () => this.deleteParagraph());
@@ -120,10 +185,17 @@ class ScenarioManager {
     this.tagsInput.addEventListener('input', () => this.updateCurrentParagraph());
     this.typeSelect.addEventListener('change', () => this.onTypeChange());
     
+    this.bindSchemaEvents();
+  }
+
+  bindSchemaEvents() {
+    // 動的に生成されたパラメータ要素にイベントリスナーを追加
     Object.values(this.typeParams).forEach(params => {
       Object.values(params).forEach(element => {
-        element.addEventListener('input', () => this.updateCurrentParagraph());
-        element.addEventListener('change', () => this.updateCurrentParagraph());
+        if (element) {
+          element.addEventListener('input', () => this.updateCurrentParagraph());
+          element.addEventListener('change', () => this.updateCurrentParagraph());
+        }
       });
     });
     
@@ -176,9 +248,20 @@ class ScenarioManager {
     this.editorContent.value = paragraph.text;
     this.tagsInput.value = paragraph.tags.join(', ');
     
-    this.typeSelect.value = paragraph.type || 'narrative';
-    this.showTypeParams(paragraph.type || 'narrative');
+    this.typeSelect.value = paragraph.type || 'dialogue';
+    this.showTypeParams(paragraph.type || 'dialogue');
     this.loadTypeParams(paragraph);
+    
+    // ブロックタイプ定義に基づいてテキスト入力を制御
+    const blockType = this.blockTypes[paragraph.type];
+    if (blockType && !blockType.requires_text) {
+      this.editorContent.disabled = true;
+      this.editorContent.placeholder = `${blockType.label}にテキストは不要です`;
+      this.editorContent.value = '';
+    } else {
+      this.editorContent.disabled = false;
+      this.editorContent.placeholder = 'ここにテキストを入力...';
+    }
   }
   
   showPlaceholder() {
@@ -258,6 +341,7 @@ class ScenarioManager {
     this.projectPath = null;
     this.renderParagraphList();
     this.showPlaceholder();
+    this.updateTitle();
   }
   
   async saveProject() {
@@ -265,6 +349,7 @@ class ScenarioManager {
       const projectData = {
         version: '1.0.0',
         createdAt: new Date().toISOString(),
+        schemaFile: 'block-types.yaml',
         paragraphs: this.paragraphs
       };
       
@@ -273,6 +358,7 @@ class ScenarioManager {
       if (result.success) {
         this.projectPath = result.path;
         alert('プロジェクトを保存しました');
+        this.updateTitle();
       }
     } catch (error) {
       console.error('保存エラー:', error);
@@ -288,8 +374,17 @@ class ScenarioManager {
         this.paragraphs = result.data.paragraphs || [];
         this.projectPath = result.path;
         this.selectedParagraphId = null;
+        
+        // スキーマファイルをロード
+        const schemaFile = result.data.schemaFile || 'block-types.yaml';
+        await this.loadSchemaFile(result.path, schemaFile);
+        
+        // UIを再生成してからデータを表示
+        this.generateTypeUI();
+        this.bindSchemaEvents();
         this.renderParagraphList();
         this.showPlaceholder();
+        this.updateTitle();
       }
     } catch (error) {
       console.error('読み込みエラー:', error);
@@ -406,6 +501,17 @@ class ScenarioManager {
     const newType = this.typeSelect.value;
     this.showTypeParams(newType);
     
+    // ブロックタイプ定義に基づいてテキスト入力を制御
+    const blockType = this.blockTypes[newType];
+    if (blockType && !blockType.requires_text) {
+      this.editorContent.disabled = true;
+      this.editorContent.placeholder = `${blockType.label}にテキストは不要です`;
+      this.editorContent.value = '';
+    } else {
+      this.editorContent.disabled = false;
+      this.editorContent.placeholder = 'ここにテキストを入力...';
+    }
+    
     if (!this.selectedParagraphId) return;
     
     const paragraph = this.paragraphs.find(p => p.id === this.selectedParagraphId);
@@ -413,6 +519,12 @@ class ScenarioManager {
       const oldType = paragraph.type;
       paragraph.type = newType;
       paragraph.updatedAt = new Date().toISOString();
+      
+      // テキストが不要なタイプに変更した場合はテキストをクリア
+      const blockType = this.blockTypes[newType];
+      if (blockType && !blockType.requires_text) {
+        paragraph.text = '';
+      }
       
       this.clearTypeParams(oldType);
       this.setDefaultParams(paragraph, newType);
@@ -449,27 +561,13 @@ class ScenarioManager {
   }
   
   setDefaultParams(paragraph, type) {
-    switch (type) {
-      case 'dialogue':
-        paragraph.speaker = paragraph.speaker || '';
-        paragraph.emotion = paragraph.emotion || '';
-        paragraph.volume = paragraph.volume || 'normal';
-        break;
-      case 'narrative':
-        paragraph.perspective = paragraph.perspective || 'third';
-        break;
-      case 'description':
-        paragraph.target = paragraph.target || '';
-        paragraph.detailLevel = paragraph.detailLevel || 'normal';
-        break;
-      case 'action':
-        paragraph.subject = paragraph.subject || '';
-        paragraph.speed = paragraph.speed || 'normal';
-        break;
-      case 'thought':
-        paragraph.character = paragraph.character || '';
-        paragraph.depth = paragraph.depth || 'normal';
-        break;
+    const blockType = this.blockTypes[type];
+    if (blockType && blockType.parameters) {
+      Object.entries(blockType.parameters).forEach(([paramName, paramDef]) => {
+        if (paragraph[paramName] === undefined) {
+          paragraph[paramName] = paramDef.default || '';
+        }
+      });
     }
   }
   
@@ -478,7 +576,11 @@ class ScenarioManager {
     
     const paragraph = this.paragraphs.find(p => p.id === this.selectedParagraphId);
     if (paragraph) {
-      paragraph.text = this.editorContent.value;
+      // テキストが必要なタイプの場合のみテキストを更新
+      const blockType = this.blockTypes[paragraph.type];
+      if (blockType && blockType.requires_text) {
+        paragraph.text = this.editorContent.value;
+      }
       paragraph.tags = this.tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
       paragraph.updatedAt = new Date().toISOString();
       
@@ -527,30 +629,45 @@ class ScenarioManager {
   }
   
   getTypeLabel(type) {
-    const labels = {
-      narrative: 'ナレーション',
-      dialogue: 'セリフ',
-      description: '描写',
-      action: 'アクション',
-      thought: '心理描写'
-    };
-    return labels[type] || 'その他';
+    const blockType = this.blockTypes[type];
+    return blockType ? blockType.label : 'その他';
   }
   
   getMainInfo(paragraph) {
-    switch (paragraph.type) {
-      case 'dialogue':
-        return paragraph.speaker || '(話者なし)';
-      case 'narrative':
-        return paragraph.perspective || 'third';
-      case 'description':
-        return paragraph.target || '(対象なし)';
-      case 'action':
-        return paragraph.subject || '(主体なし)';
-      case 'thought':
-        return paragraph.character || '(人物なし)';
-      default:
-        return '(情報なし)';
+    const blockType = this.blockTypes[paragraph.type];
+    if (!blockType) return '(情報なし)';
+    
+    // 最初のパラメータの値を表示するか、タイプ名を表示
+    const params = blockType.parameters;
+    const paramKeys = Object.keys(params);
+    
+    if (paramKeys.length > 0) {
+      const firstParamKey = paramKeys[0];
+      const value = paragraph[firstParamKey];
+      if (value) {
+        return value;
+      }
+    }
+    
+    return blockType.label;
+  }
+  
+  updateTitle() {
+    const titleElement = document.title;
+    const headerTitle = document.querySelector('header h1');
+    
+    if (this.projectPath) {
+      const fileName = this.projectPath.split('/').pop().replace('.fbl', '');
+      const newTitle = `Fabulor - ${fileName}`;
+      document.title = newTitle;
+      if (headerTitle) {
+        headerTitle.textContent = newTitle;
+      }
+    } else {
+      document.title = 'Fabulor - 無題のプロジェクト';
+      if (headerTitle) {
+        headerTitle.textContent = 'Fabulor - 無題のプロジェクト';
+      }
     }
   }
 }

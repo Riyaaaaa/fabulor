@@ -177,6 +177,12 @@ main {
   border-color: #007fd4;
 }
 
+.editor-content:disabled {
+  background-color: #1a1a1a;
+  color: #666666;
+  cursor: not-allowed;
+}
+
 .metadata {
   margin-top: 1rem;
   display: flex;
@@ -241,6 +247,14 @@ main {
 .type-params label {
   font-size: 0.85rem;
   color: #b3b3b3;
+}
+
+.type-info {
+  color: #888888;
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 0;
+  padding: 1rem;
 }
 
 /* プレビューモーダル */

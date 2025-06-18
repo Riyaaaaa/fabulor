@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const yaml = require('js-yaml');
 
 let mainWindow;
 
@@ -108,6 +109,33 @@ ipcMain.handle('export-json', async (event, exportData) => {
     return { success: true, path: result.filePath };
   } catch (error) {
     console.error('Export error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('load-block-types', async (event) => {
+  try {
+    const blockTypesPath = path.join(__dirname, 'block-types.yaml');
+    const yamlContent = await fs.readFile(blockTypesPath, 'utf8');
+    const blockTypes = yaml.load(yamlContent);
+    
+    return { success: true, data: blockTypes };
+  } catch (error) {
+    console.error('Schema file load error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('load-schema-file', async (event, projectPath, schemaFileName) => {
+  try {
+    const projectDir = path.dirname(projectPath);
+    const schemaPath = path.join(projectDir, schemaFileName);
+    const yamlContent = await fs.readFile(schemaPath, 'utf8');
+    const schemaData = yaml.load(yamlContent);
+    
+    return { success: true, data: schemaData };
+  } catch (error) {
+    console.error('Schema file load error:', error);
     return { success: false, error: error.message };
   }
 });
