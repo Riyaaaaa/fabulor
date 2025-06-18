@@ -281,3 +281,33 @@ ipcMain.handle('save-new-scene', async (event, projectPath) => {
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('import-text-file', async (event) => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'テキストファイルをインポート',
+      filters: [
+        { name: 'Text Files', extensions: ['txt'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false };
+    }
+    
+    const filePath = result.filePaths[0];
+    const textContent = await fs.readFile(filePath, 'utf8');
+    const fileName = path.basename(filePath, path.extname(filePath));
+    
+    return { 
+      success: true, 
+      content: textContent,
+      fileName: fileName
+    };
+  } catch (error) {
+    console.error('Import text file error:', error);
+    return { success: false, error: error.message };
+  }
+});

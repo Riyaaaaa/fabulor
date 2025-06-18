@@ -6,6 +6,7 @@ import { UIManager } from './modules/ui-manager.js';
 import { PreviewManager } from './modules/preview-manager.js';
 import { SceneManager } from './modules/scene-manager.js';
 import { CharacterManager } from './modules/character-manager.js';
+import { TextImporter } from './modules/text-importer.js';
 
 class ScenarioManager {
   constructor() {
@@ -14,6 +15,7 @@ class ScenarioManager {
     this.sceneManager = new SceneManager();
     this.characterManager = new CharacterManager();
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
+    this.textImporter = new TextImporter(this.paragraphManager);
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager, this.characterManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
     
@@ -39,6 +41,7 @@ class ScenarioManager {
     document.getElementById('preview-novel').addEventListener('click', () => this.previewManager.showPreview());
     document.getElementById('reload-schema').addEventListener('click', () => this.reloadSchema());
     document.getElementById('add-scene').addEventListener('click', () => this.addScene());
+    document.getElementById('import-text').addEventListener('click', () => this.importTextAsScene());
     
     const editorContent = this.uiManager.getEditorContent();
     const tagsInput = this.uiManager.getTagsInput();
@@ -479,7 +482,8 @@ class ScenarioManager {
       'export-csv',
       'preview-novel',
       'reload-schema',
-      'add-scene'
+      'add-scene',
+      'import-text'
     ];
     
     editButtons.forEach(id => {
@@ -520,6 +524,75 @@ class ScenarioManager {
       if (placeholder) {
         placeholder.textContent = 'シーンを選択してください';
       }
+    }
+  }
+
+  async importTextAsScene() {
+    const projectPath = this.projectManager.getProjectPath();
+    if (!projectPath) {
+      await this.newProject();
+      return;
+    }
+
+    try {
+      // テキストファイルを選択・読み込み
+      const importResult = await window.electronAPI.importTextFile();
+      if (!importResult.success) return;
+
+      // テキストをブロックに変換
+      const paragraphs = this.textImporter.importFromText(importResult.content);
+      
+      if (paragraphs.length === 0) {
+        alert('インポートできるブロックが見つかりませんでした');
+        return;
+      }
+
+      // プレビューを表示
+      const preview = this.textImporter.generatePreview(paragraphs);
+      const confirmed = confirm(`以下の${paragraphs.length}個のブロックをインポートしますか？\n\n${preview.substring(0, 500)}${preview.length > 500 ? '\n...' : ''}`);
+      
+      if (!confirmed) return;
+
+      // 現在のシーンを保存
+      await this.saveCurrentScene();
+
+      // 新しいシーンを作成
+      const newScene = this.sceneManager.createScene(importResult.fileName || 'インポートされたシーン');
+      
+      // シーンファイルを保存
+      await window.electronAPI.saveScene(projectPath, newScene.id, {
+        id: newScene.id,
+        name: newScene.name,
+        fileName: newScene.fileName,
+        paragraphs: paragraphs
+      });
+
+      this.sceneManager.markSceneAsExisting(newScene.id, true);
+      this.sceneManager.selectScene(newScene.id);
+      this.paragraphManager.setParagraphs(paragraphs);
+
+      // シーン編集機能を有効化
+      this.setSceneEditingEnabled(true);
+
+      this.markAsChanged();
+      this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene.id, (sceneId) => this.selectScene(sceneId));
+      this.uiManager.updateCurrentSceneName(newScene.name);
+      this.uiManager.renderParagraphList();
+      
+      // 最初のブロックを選択
+      if (paragraphs.length > 0) {
+        const firstParagraph = this.paragraphManager.selectParagraph(paragraphs[0].id);
+        if (firstParagraph) {
+          this.uiManager.showEditor(firstParagraph);
+          this.uiManager.updateParagraphSelection();
+        }
+      }
+
+      alert(`${paragraphs.length}個のブロックをインポートしました`);
+
+    } catch (error) {
+      console.error('テキストインポートエラー:', error);
+      alert(`テキストインポートに失敗しました\n\nエラー内容: ${error.message}`);
     }
   }
 }
