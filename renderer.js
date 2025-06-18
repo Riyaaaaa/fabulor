@@ -425,12 +425,12 @@ class ScenarioManager {
       return;
     }
     
-    this.previewModal.style.display = 'flex';
+    this.previewModal.classList.add('show');
     this.updatePreview();
   }
   
   closePreview() {
-    this.previewModal.style.display = 'none';
+    this.previewModal.classList.remove('show');
   }
   
   updatePreview() {
