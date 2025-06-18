@@ -107,12 +107,8 @@ class ScenarioManager {
       version: '2.0.0',
       createdAt: new Date().toISOString(),
       schemaFile: 'schema.yaml',
-      scenes: [{
-        id: 'main_scene',
-        name: 'メインシーン',
-        fileName: 'main_scene.json'
-      }],
-      currentSceneId: 'main_scene'
+      scenes: [],
+      currentSceneId: null
     }, null);
     
     if (!saveResult.success) return;
@@ -124,27 +120,15 @@ class ScenarioManager {
     // 新規プロジェクトをセットアップ
     this.sceneManager.clearScenes();
     this.sceneManager.setProjectPath(saveResult.path);
-    const defaultScene = this.sceneManager.createScene('メインシーン');
-    defaultScene.id = 'main_scene';
-    defaultScene.fileName = 'main_scene.json';
-    this.sceneManager.selectScene(defaultScene.id);
-    
-    // メインシーンのファイルを作成
-    await window.electronAPI.saveScene(saveResult.path, defaultScene.id, {
-      id: defaultScene.id,
-      name: defaultScene.name,
-      fileName: defaultScene.fileName,
-      paragraphs: []
-    });
-    this.sceneManager.markSceneAsExisting(defaultScene.id, true);
     
     this.paragraphManager.setParagraphs([]);
     
-    // 編集機能を有効化
+    // 編集機能を有効化（シーン編集は無効化）
     this.setEditingEnabled(true);
+    this.setSceneEditingEnabled(false);
     
-    this.uiManager.renderSceneList(this.sceneManager.getScenes(), defaultScene.id, (sceneId) => this.selectScene(sceneId));
-    this.uiManager.updateCurrentSceneName(defaultScene.name);
+    this.uiManager.renderSceneList([], null, (sceneId) => this.selectScene(sceneId));
+    this.uiManager.updateCurrentSceneName('');
     this.uiManager.renderParagraphList();
     this.uiManager.showPlaceholder();
     this.updateTitle();
@@ -391,6 +375,9 @@ class ScenarioManager {
     this.sceneManager.selectScene(newScene.id);
     this.paragraphManager.setParagraphs([]);
     
+    // シーン編集機能を有効化
+    this.setSceneEditingEnabled(true);
+    
     this.markAsChanged();
     this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene.id, (sceneId) => this.selectScene(sceneId));
     this.uiManager.updateCurrentSceneName(newScene.name);
@@ -421,6 +408,9 @@ class ScenarioManager {
     } else {
       this.paragraphManager.setParagraphs(scene.paragraphs || []);
     }
+    
+    // シーン編集機能を有効化
+    this.setSceneEditingEnabled(true);
     
     this.uiManager.renderSceneList(this.sceneManager.getScenes(), sceneId, (sceneId) => this.selectScene(sceneId));
     this.uiManager.updateCurrentSceneName(scene.name);
@@ -468,9 +458,7 @@ class ScenarioManager {
       'export-csv',
       'preview-novel',
       'reload-schema',
-      'add-scene',
-      'add-paragraph',
-      'delete-paragraph'
+      'add-scene'
     ];
     
     editButtons.forEach(id => {
@@ -486,6 +474,30 @@ class ScenarioManager {
       const placeholder = document.getElementById('editor-placeholder');
       if (placeholder) {
         placeholder.textContent = 'プロジェクトを作成または開いてください';
+      }
+    }
+  }
+
+  setSceneEditingEnabled(enabled) {
+    // シーン編集関連のボタンを有効/無効化
+    const sceneEditButtons = [
+      'add-paragraph',
+      'delete-paragraph'
+    ];
+    
+    sceneEditButtons.forEach(id => {
+      const button = document.getElementById(id);
+      if (button) {
+        button.disabled = !enabled;
+      }
+    });
+    
+    // エディタの表示/非表示
+    if (!enabled) {
+      this.uiManager.showPlaceholder();
+      const placeholder = document.getElementById('editor-placeholder');
+      if (placeholder) {
+        placeholder.textContent = 'シーンを選択してください';
       }
     }
   }

@@ -10,7 +10,7 @@ class SceneManager {
     return 'scene_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
-  createScene(name = '新規シーン') {
+  createScene(name = 'New scene') {
     const sceneId = this.generateSceneId();
     const scene = {
       id: sceneId,

@@ -40,7 +40,7 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
     if (!filePath) {
       const result = await dialog.showSaveDialog(mainWindow, {
         title: 'プロジェクトを保存',
-        defaultPath: 'シナリオ.fbl',
+        defaultPath: 'New project.fbl',
         filters: [
           { name: 'Fabulor Project', extensions: ['fbl'] },
           { name: 'All Files', extensions: ['*'] }
@@ -192,7 +192,7 @@ ipcMain.handle('save-new-scene', async (event, projectPath) => {
     
     const result = await dialog.showSaveDialog(mainWindow, {
       title: '新規シーンを作成',
-      defaultPath: path.join(scenesDir, '新規シーン.json'),
+      defaultPath: path.join(scenesDir, 'New scene.json'),
       filters: [
         { name: 'Scene Files', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] }
