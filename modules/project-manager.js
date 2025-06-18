@@ -183,8 +183,13 @@ class ProjectManager {
     
     value = value.toString();
     
-    // ダブルクォート、カンマ、改行が含まれる場合はエスケープ
-    if (value.includes('"') || value.includes(',') || value.includes('\n') || value.includes('\r')) {
+    // 改行を改行コード文字列に変換
+    value = value.replace(/\r\n/g, '\\r\\n')
+                 .replace(/\n/g, '\\n')
+                 .replace(/\r/g, '\\r');
+    
+    // ダブルクォート、カンマが含まれる場合はエスケープ
+    if (value.includes('"') || value.includes(',')) {
       // ダブルクォートをエスケープ
       value = value.replace(/"/g, '""');
       // 全体をダブルクォートで囲む
