@@ -1,0 +1,377 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  background-color: #2d2d30;
+  padding: 1rem;
+  border-bottom: 1px solid #3e3e42;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+}
+
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toolbar button, .add-button, .delete-button {
+  padding: 0.5rem 1rem;
+  background-color: #0e639c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.toolbar button:hover, .add-button:hover {
+  background-color: #1177bb;
+}
+
+.delete-button {
+  background-color: #f14c4c;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.delete-button:hover {
+  background-color: #cd3636;
+}
+
+main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 300px;
+  background-color: #252526;
+  border-right: 1px solid #3e3e42;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: #cccccc;
+}
+
+.paragraph-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.paragraph-item {
+  padding: 0.75rem;
+  background-color: #2d2d30;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: 1px solid transparent;
+}
+
+.paragraph-item:hover {
+  background-color: #37373d;
+}
+
+.paragraph-item.selected {
+  background-color: #094771;
+  border-color: #007fd4;
+}
+
+.paragraph-item h3 {
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  color: #ffffff;
+}
+
+.paragraph-item p {
+  font-size: 0.8rem;
+  color: #cccccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-button {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.editor {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background-color: #1e1e1e;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6e6e6e;
+  font-size: 1.1rem;
+}
+
+.editor-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.paragraph-id {
+  font-size: 0.8rem;
+  color: #858585;
+  font-family: monospace;
+}
+
+.editor-content {
+  width: 100%;
+  min-height: 400px;
+  padding: 1rem;
+  background-color: #2d2d30;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.editor-content:focus {
+  outline: none;
+  border-color: #007fd4;
+}
+
+.metadata {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.metadata label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #cccccc;
+}
+
+.metadata input {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: #3c3c3c;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.metadata input:focus {
+  outline: none;
+  border-color: #007fd4;
+}
+
+.metadata select {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: #3c3c3c;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.metadata select:focus {
+  outline: none;
+  border-color: #007fd4;
+}
+
+.type-select {
+  font-weight: bold;
+  background-color: #2d2d30 !important;
+}
+
+.type-params {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background-color: #2a2a2c;
+  border-radius: 4px;
+  border-left: 3px solid #007fd4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.type-params label {
+  font-size: 0.85rem;
+  color: #b3b3b3;
+}
+
+/* プレビューモーダル */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: #2d2d30;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 900px;
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #3e3e42;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #3e3e42;
+  background-color: #252526;
+  border-radius: 8px 8px 0 0;
+}
+
+.modal-header h2 {
+  color: #ffffff;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.modal-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.modal-controls select {
+  padding: 0.5rem;
+  background-color: #3c3c3c;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.modal-controls select:focus {
+  outline: none;
+  border-color: #007fd4;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #cccccc;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #3e3e42;
+  color: #ffffff;
+}
+
+.modal-body {
+  flex: 1;
+  overflow: hidden;
+}
+
+.preview-content {
+  height: 100%;
+  padding: 2rem;
+  overflow-y: auto;
+  line-height: 1.8;
+  font-size: 1rem;
+  color: #e0e0e0;
+  background-color: #1e1e1e;
+}
+
+/* 小説形式のスタイル */
+.preview-content.novel-format .paragraph {
+  margin-bottom: 1.5rem;
+  text-indent: 1em;
+}
+
+.preview-content.novel-format .paragraph.dialogue {
+  text-indent: 0;
+  margin-left: 1em;
+}
+
+.preview-content.novel-format .paragraph.dialogue::before {
+  content: "「";
+  color: #ffb3ba;
+}
+
+.preview-content.novel-format .paragraph.dialogue::after {
+  content: "」";
+  color: #ffb3ba;
+}
+
+/* 台本形式のスタイル */
+.preview-content.script-format .paragraph {
+  margin-bottom: 1rem;
+}
+
+.preview-content.script-format .speaker {
+  font-weight: bold;
+  color: #87ceeb;
+  margin-bottom: 0.25rem;
+}
+
+.preview-content.script-format .speaker::after {
+  content: "：";
+}
+
+.preview-content.script-format .text {
+  margin-left: 1rem;
+  color: #e0e0e0;
+}
