@@ -106,7 +106,7 @@ class ScenarioManager {
     const saveResult = await window.electronAPI.saveProject({
       version: '2.0.0',
       createdAt: new Date().toISOString(),
-      schemaFile: 'schema.yaml',
+      schemaFile: '', // 後で設定
       scenes: [],
       currentSceneId: null
     }, null);
@@ -116,6 +116,13 @@ class ScenarioManager {
     // プロジェクトマネージャーを更新
     this.projectManager.setProjectPath(saveResult.path);
     this.projectManager.markAsSaved();
+    
+    // スキーマファイルを読み込み
+    if (saveResult.schemaFileName) {
+      await this.blockTypeManager.loadSchemaFile(saveResult.path, saveResult.schemaFileName);
+      this.uiManager.generateTypeUI();
+      this.bindSchemaEvents();
+    }
     
     // 新規プロジェクトをセットアップ
     this.sceneManager.clearScenes();

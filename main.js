@@ -56,7 +56,29 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
     
     await fs.writeFile(filePath, JSON.stringify(projectData, null, 2), 'utf8');
     
-    return { success: true, path: filePath };
+    // プロジェクト名に基づいてスキーマファイルを作成
+    const projectName = path.basename(filePath, '.fbl');
+    const projectDir = path.dirname(filePath);
+    const schemaFileName = `${projectName}_schema.yaml`;
+    const schemaPath = path.join(projectDir, schemaFileName);
+    
+    // デフォルトのスキーマ内容
+    const defaultSchemaContent = `# ブロックタイプ定義ファイル
+# このファイルでカスタムブロックタイプを定義できます
+# 注意: 「dialogue（セリフ）」と「narrative（地の文）」は標準定義として常に含まれます
+
+block_types:
+  # カスタムブロックタイプをここに定義してください
+`;
+    
+    // スキーマファイルが存在しない場合のみ作成
+    try {
+      await fs.access(schemaPath);
+    } catch {
+      await fs.writeFile(schemaPath, defaultSchemaContent, 'utf8');
+    }
+    
+    return { success: true, path: filePath, schemaFileName: schemaFileName };
   } catch (error) {
     console.error('Save error:', error);
     return { success: false, error: error.message };

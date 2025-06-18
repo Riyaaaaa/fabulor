@@ -51,8 +51,12 @@ class ProjectManager {
       if (result.success) {
         this.projectPath = result.path;
         this.hasUnsavedChanges = false;
+        // スキーマファイル名を更新
+        if (result.schemaFileName) {
+          this.currentSchemaFile = result.schemaFileName;
+        }
         alert('プロジェクトを保存しました');
-        return { success: true, path: result.path };
+        return { success: true, path: result.path, schemaFileName: result.schemaFileName };
       } else {
         const errorMessage = result.error || '不明なエラー';
         alert(`プロジェクトの保存に失敗しました\n\nエラー内容: ${errorMessage}`);
