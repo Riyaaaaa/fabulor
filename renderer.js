@@ -3,13 +3,15 @@ class ScenarioManager {
     this.paragraphs = [];
     this.selectedParagraphId = null;
     this.projectPath = null;
-    this.blockTypes = {};
+    this.blockTypes = {
+      dialogue: { label: 'セリフ', requires_text: true, parameters: {} },
+      narrative: { label: '地の文', requires_text: true, parameters: {} },
+      command: { label: 'コマンド', requires_text: false, parameters: {} }
+    };
     
-    this.loadBlockTypes().then(() => {
-      this.initializeUI();
-      this.bindEvents();
-      this.updateTitle();
-    });
+    this.initializeUI();
+    this.bindEvents();
+    this.updateTitle();
   }
   
   async loadBlockTypes() {
@@ -33,6 +35,7 @@ class ScenarioManager {
 
   async loadSchemaFile(projectPath, schemaFileName) {
     try {
+      console.log("Loading schema file:", schemaFileName);
       const result = await window.electronAPI.loadSchemaFile(projectPath, schemaFileName);
       if (result.success) {
         this.blockTypes = result.data.block_types;
@@ -167,8 +170,8 @@ class ScenarioManager {
         });
       }
 
-      // タグ入力の前に挿入
-      metadataDiv.insertBefore(container, document.querySelector('label:last-child'));
+      // メタデータセクションに追加
+      metadataDiv.appendChild(container);
     });
   }
 
@@ -388,7 +391,7 @@ class ScenarioManager {
       }
     } catch (error) {
       console.error('読み込みエラー:', error);
-      alert('読み込みに失敗しました');
+      alert(`読み込みに失敗しました\n\nエラー内容: ${error.message}`);
     }
   }
   
