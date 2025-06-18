@@ -1,0 +1,248 @@
+// UI管理モジュール
+class UIManager {
+  constructor(blockTypeManager, paragraphManager, projectManager) {
+    this.blockTypeManager = blockTypeManager;
+    this.paragraphManager = paragraphManager;
+    this.projectManager = projectManager;
+    this.typeParamContainers = {};
+    this.typeParams = {};
+    
+    this.initializeElements();
+  }
+
+  initializeElements() {
+    this.paragraphList = document.getElementById('paragraph-list');
+    this.editorPlaceholder = document.getElementById('editor-placeholder');
+    this.editorContainer = document.getElementById('editor-container');
+    this.editorContent = document.getElementById('editor-content');
+    this.paragraphIdSpan = document.getElementById('paragraph-id');
+    this.tagsInput = document.getElementById('tags-input');
+    this.typeSelect = document.getElementById('type-select');
+    this.previewModal = document.getElementById('preview-modal');
+    this.previewContent = document.getElementById('preview-content');
+    this.previewFormat = document.getElementById('preview-format');
+  }
+
+  generateTypeUI() {
+    // タイプセレクトのオプションを生成
+    this.typeSelect.innerHTML = '';
+    const blockTypes = this.blockTypeManager.getBlockTypes();
+    Object.entries(blockTypes).forEach(([typeKey, typeDef]) => {
+      const option = document.createElement('option');
+      option.value = typeKey;
+      option.textContent = typeDef.label;
+      this.typeSelect.appendChild(option);
+    });
+
+    // 既存のパラメータコンテナを削除
+    const existingContainers = document.querySelectorAll('.type-params');
+    existingContainers.forEach(container => container.remove());
+
+    // 新しいパラメータコンテナを動的生成
+    this.typeParamContainers = {};
+    this.typeParams = {};
+    const metadataDiv = document.querySelector('.metadata');
+
+    Object.entries(blockTypes).forEach(([typeKey, typeDef]) => {
+      // パラメータコンテナを作成
+      const container = document.createElement('div');
+      container.id = `${typeKey}-params`;
+      container.className = 'type-params';
+      container.style.display = 'none';
+
+      this.typeParamContainers[typeKey] = container;
+      this.typeParams[typeKey] = {};
+
+      if (Object.keys(typeDef.parameters).length === 0) {
+        // パラメータがない場合は情報メッセージを表示
+        const infoP = document.createElement('p');
+        infoP.className = 'type-info';
+        infoP.textContent = `${typeDef.label}には追加設定項目はありません`;
+        container.appendChild(infoP);
+      } else {
+        // パラメータがある場合は入力要素を生成
+        Object.entries(typeDef.parameters).forEach(([paramKey, paramDef]) => {
+          const label = document.createElement('label');
+          label.textContent = paramDef.label + ':';
+
+          let inputElement;
+          if (paramDef.type === 'text') {
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.placeholder = paramDef.placeholder || '';
+          } else if (paramDef.type === 'number') {
+            inputElement = document.createElement('input');
+            inputElement.type = 'number';
+            inputElement.placeholder = paramDef.placeholder || '';
+            if (paramDef.min !== undefined) inputElement.min = paramDef.min;
+            if (paramDef.step !== undefined) inputElement.step = paramDef.step;
+          } else if (paramDef.type === 'select') {
+            inputElement = document.createElement('select');
+            paramDef.options.forEach(option => {
+              const optionElement = document.createElement('option');
+              optionElement.value = option.value;
+              optionElement.textContent = option.label;
+              inputElement.appendChild(optionElement);
+            });
+          }
+
+          inputElement.id = `${typeKey}-${paramKey}`;
+          this.typeParams[typeKey][paramKey] = inputElement;
+
+          label.appendChild(inputElement);
+          container.appendChild(label);
+        });
+      }
+
+      // メタデータセクションに追加
+      metadataDiv.appendChild(container);
+    });
+  }
+
+  showEditor(paragraph) {
+    this.editorPlaceholder.style.display = 'none';
+    this.editorContainer.style.display = 'block';
+    
+    paragraph = this.paragraphManager.migrateParagraph(paragraph);
+    
+    this.paragraphIdSpan.textContent = `ID: ${paragraph.id}`;
+    this.editorContent.value = paragraph.text;
+    this.tagsInput.value = paragraph.tags.join(', ');
+    
+    this.typeSelect.value = paragraph.type || 'dialogue';
+    this.showTypeParams(paragraph.type || 'dialogue');
+    this.loadTypeParams(paragraph);
+    
+    // ブロックタイプ定義に基づいてテキスト入力を制御
+    const blockType = this.blockTypeManager.getBlockType(paragraph.type);
+    if (blockType && !blockType.requires_text) {
+      this.editorContent.disabled = true;
+      this.editorContent.placeholder = `${blockType.label}にテキストは不要です`;
+      this.editorContent.value = '';
+    } else {
+      this.editorContent.disabled = false;
+      this.editorContent.placeholder = 'ここにテキストを入力...';
+    }
+  }
+
+  showPlaceholder() {
+    this.editorPlaceholder.style.display = 'flex';
+    this.editorContainer.style.display = 'none';
+  }
+
+  showTypeParams(type) {
+    Object.entries(this.typeParamContainers).forEach(([key, container]) => {
+      container.style.display = key === type ? 'flex' : 'none';
+    });
+  }
+
+  loadTypeParams(paragraph) {
+    const type = paragraph.type;
+    if (!this.typeParams[type]) return;
+    
+    Object.entries(this.typeParams[type]).forEach(([key, element]) => {
+      if (element && paragraph[key] !== undefined) {
+        element.value = paragraph[key];
+      }
+    });
+  }
+
+  clearTypeParams(type) {
+    if (!this.typeParams[type]) return;
+    
+    Object.values(this.typeParams[type]).forEach(element => {
+      if (element) {
+        element.value = '';
+      }
+    });
+  }
+
+  renderParagraphList() {
+    this.paragraphList.innerHTML = '';
+    
+    const paragraphs = this.paragraphManager.getParagraphs();
+    paragraphs.forEach(paragraph => {
+      const item = this.createParagraphListItem(paragraph);
+      this.paragraphList.appendChild(item);
+    });
+  }
+
+  createParagraphListItem(paragraph) {
+    const item = document.createElement('div');
+    item.className = 'paragraph-item';
+    item.dataset.id = paragraph.id;
+    
+    const title = document.createElement('h3');
+    const typeLabel = this.blockTypeManager.getTypeLabel(paragraph.type);
+    const mainInfo = this.paragraphManager.getMainInfo(paragraph);
+    title.textContent = `${typeLabel}: ${mainInfo}`;
+    
+    const preview = document.createElement('p');
+    preview.textContent = paragraph.text || '(テキストなし)';
+    
+    item.appendChild(title);
+    item.appendChild(preview);
+    
+    item.addEventListener('click', () => {
+      const selectedParagraph = this.paragraphManager.selectParagraph(paragraph.id);
+      if (selectedParagraph) {
+        this.showEditor(selectedParagraph);
+        this.updateParagraphSelection();
+      }
+    });
+    
+    return item;
+  }
+
+  updateParagraphListItem(paragraph) {
+    const item = this.paragraphList.querySelector(`[data-id="${paragraph.id}"]`);
+    if (item) {
+      const typeLabel = this.blockTypeManager.getTypeLabel(paragraph.type);
+      const mainInfo = this.paragraphManager.getMainInfo(paragraph);
+      item.querySelector('h3').textContent = `${typeLabel}: ${mainInfo}`;
+      item.querySelector('p').textContent = paragraph.text || '(テキストなし)';
+    }
+  }
+
+  updateParagraphSelection() {
+    const items = this.paragraphList.querySelectorAll('.paragraph-item');
+    const selectedId = this.paragraphManager.getSelectedParagraphId();
+    items.forEach(item => {
+      if (item.dataset.id === selectedId) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  getTypeParams() {
+    return this.typeParams;
+  }
+
+  getEditorContent() {
+    return this.editorContent;
+  }
+
+  getTagsInput() {
+    return this.tagsInput;
+  }
+
+  getTypeSelect() {
+    return this.typeSelect;
+  }
+
+  getPreviewModal() {
+    return this.previewModal;
+  }
+
+  getPreviewContent() {
+    return this.previewContent;
+  }
+
+  getPreviewFormat() {
+    return this.previewFormat;
+  }
+}
+
+export { UIManager };
