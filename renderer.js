@@ -3,6 +3,7 @@ class ScenarioManager {
     this.paragraphs = [];
     this.selectedParagraphId = null;
     this.projectPath = null;
+    this.hasUnsavedChanges = false;
     this.blockTypes = {
       dialogue: { label: 'セリフ', requires_text: true, parameters: {} },
       narrative: { label: '地の文', requires_text: true, parameters: {} },
@@ -215,6 +216,7 @@ class ScenarioManager {
   addParagraph() {
     const newParagraph = this.createParagraph();
     this.paragraphs.push(newParagraph);
+    this.markAsChanged();
     this.renderParagraphList();
     this.selectParagraph(newParagraph.id);
   }
@@ -226,6 +228,7 @@ class ScenarioManager {
     if (index !== -1) {
       this.paragraphs.splice(index, 1);
       this.selectedParagraphId = null;
+      this.markAsChanged();
       this.renderParagraphList();
       this.showPlaceholder();
     }
@@ -342,6 +345,7 @@ class ScenarioManager {
     this.paragraphs = [];
     this.selectedParagraphId = null;
     this.projectPath = null;
+    this.hasUnsavedChanges = false;
     this.renderParagraphList();
     this.showPlaceholder();
     this.updateTitle();
@@ -360,6 +364,7 @@ class ScenarioManager {
       
       if (result.success) {
         this.projectPath = result.path;
+        this.hasUnsavedChanges = false;
         alert('プロジェクトを保存しました');
         this.updateTitle();
       }
@@ -377,6 +382,7 @@ class ScenarioManager {
         this.paragraphs = result.data.paragraphs || [];
         this.projectPath = result.path;
         this.selectedParagraphId = null;
+        this.hasUnsavedChanges = false;
         
         // スキーマファイルをロード
         const schemaFile = result.data.schemaFile || 'schema.yaml';
@@ -532,6 +538,7 @@ class ScenarioManager {
       this.clearTypeParams(oldType);
       this.setDefaultParams(paragraph, newType);
       this.loadTypeParams(paragraph);
+      this.markAsChanged();
       this.updateParagraphListItem(paragraph);
     }
   }
@@ -596,6 +603,7 @@ class ScenarioManager {
         });
       }
       
+      this.markAsChanged();
       this.updateParagraphListItem(paragraph);
     }
   }
@@ -655,21 +663,27 @@ class ScenarioManager {
     return blockType.label;
   }
   
+  markAsChanged() {
+    this.hasUnsavedChanges = true;
+    this.updateTitle();
+  }
+
   updateTitle() {
-    const titleElement = document.title;
     const headerTitle = document.querySelector('header h1');
+    const asterisk = this.hasUnsavedChanges ? '*' : '';
     
     if (this.projectPath) {
       const fileName = this.projectPath.split('/').pop().replace('.fbl', '');
-      const newTitle = `Fabulor - ${fileName}`;
+      const newTitle = `Fabulor - ${fileName}${asterisk}`;
       document.title = newTitle;
       if (headerTitle) {
         headerTitle.textContent = newTitle;
       }
     } else {
-      document.title = 'Fabulor - 無題のプロジェクト';
+      const newTitle = `Fabulor - 無題のプロジェクト${asterisk}`;
+      document.title = newTitle;
       if (headerTitle) {
-        headerTitle.textContent = 'Fabulor - 無題のプロジェクト';
+        headerTitle.textContent = newTitle;
       }
     }
   }
