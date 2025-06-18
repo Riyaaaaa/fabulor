@@ -113,19 +113,6 @@ ipcMain.handle('export-json', async (event, exportData) => {
   }
 });
 
-ipcMain.handle('load-block-types', async (event) => {
-  try {
-    const blockTypesPath = path.join(__dirname, 'block-types.yaml');
-    const yamlContent = await fs.readFile(blockTypesPath, 'utf8');
-    const blockTypes = yaml.load(yamlContent);
-    
-    return { success: true, data: blockTypes };
-  } catch (error) {
-    console.error('Schema file load error:', error);
-    return { success: false, error: error.message };
-  }
-});
-
 ipcMain.handle('load-schema-file', async (event, projectPath, schemaFileName) => {
   try {
     const projectDir = path.dirname(projectPath);
