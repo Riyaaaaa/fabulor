@@ -21,6 +21,8 @@ class UIManager {
     this.previewModal = document.getElementById('preview-modal');
     this.previewContent = document.getElementById('preview-content');
     this.previewFormat = document.getElementById('preview-format');
+    this.sceneList = document.getElementById('scene-list');
+    this.currentSceneName = document.getElementById('current-scene-name');
   }
 
   generateTypeUI() {
@@ -242,6 +244,43 @@ class UIManager {
 
   getPreviewFormat() {
     return this.previewFormat;
+  }
+
+  renderSceneList(scenes, currentSceneId, sceneClickHandler) {
+    this.sceneList.innerHTML = '';
+    
+    scenes.forEach(scene => {
+      const item = document.createElement('div');
+      item.className = 'scene-item';
+      item.dataset.id = scene.id;
+      
+      if (scene.id === currentSceneId) {
+        item.classList.add('selected');
+      }
+      
+      if (!scene.exists) {
+        item.classList.add('missing');
+      }
+      
+      const title = document.createElement('h3');
+      title.textContent = scene.name;
+      
+      const info = document.createElement('p');
+      info.textContent = scene.fileName;
+      
+      item.appendChild(title);
+      item.appendChild(info);
+      
+      item.addEventListener('click', () => sceneClickHandler(scene.id));
+      
+      this.sceneList.appendChild(item);
+    });
+  }
+
+  updateCurrentSceneName(sceneName) {
+    if (this.currentSceneName) {
+      this.currentSceneName.textContent = sceneName ? `現在のシーン: ${sceneName}` : 'シーンが選択されていません';
+    }
   }
 }
 

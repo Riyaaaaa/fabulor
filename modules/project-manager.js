@@ -36,13 +36,14 @@ class ProjectManager {
     return true;
   }
 
-  async saveProject(paragraphs) {
+  async saveProject(scenes, currentSceneId) {
     try {
       const projectData = {
-        version: '1.0.0',
+        version: '2.0.0',
         createdAt: new Date().toISOString(),
         schemaFile: this.currentSchemaFile,
-        paragraphs: paragraphs
+        scenes: scenes,
+        currentSceneId: currentSceneId
       };
       
       const result = await window.electronAPI.saveProject(projectData, this.projectPath);
@@ -72,6 +73,33 @@ class ProjectManager {
         this.projectPath = result.path;
         this.hasUnsavedChanges = false;
         this.currentSchemaFile = result.data.schemaFile || 'schema.yaml';
+        // バージョンチェック
+        const version = result.data.version || '1.0.0';
+        
+        if (version === '1.0.0') {
+          // 旧バージョンのプロジェクトを新形式に変換
+          const convertedData = {
+            version: '2.0.0',
+            createdAt: result.data.createdAt,
+            schemaFile: result.data.schemaFile || 'schema.yaml',
+            scenes: [{
+              id: 'default_scene',
+              name: 'メインシーン',
+              fileName: 'default_scene.json'
+            }],
+            currentSceneId: 'default_scene'
+          };
+          
+          // 旧データの段落は別途処理が必要
+          return {
+            success: true,
+            data: convertedData,
+            path: result.path,
+            schemaFile: this.currentSchemaFile,
+            legacyParagraphs: result.data.paragraphs || []
+          };
+        }
+        
         return {
           success: true,
           data: result.data,

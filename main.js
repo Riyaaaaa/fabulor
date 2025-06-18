@@ -126,3 +126,95 @@ ipcMain.handle('load-schema-file', async (event, projectPath, schemaFileName) =>
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('save-scene', async (event, projectPath, sceneId, sceneData) => {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenesDir = `${projectDir}_scenes`;
+    
+    // scenesディレクトリが存在しない場合は作成
+    try {
+      await fs.access(scenesDir);
+    } catch {
+      await fs.mkdir(scenesDir, { recursive: true });
+    }
+    
+    // sceneDataにfileNameが含まれている場合はそれを使用
+    const fileName = sceneData.fileName || `${sceneId}.json`;
+    const scenePath = path.join(scenesDir, fileName);
+    await fs.writeFile(scenePath, JSON.stringify(sceneData, null, 2), 'utf8');
+    
+    return { success: true, path: scenePath };
+  } catch (error) {
+    console.error('Scene save error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('load-scene', async (event, projectPath, sceneFileName) => {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenePath = path.join(`${projectDir}_scenes`, sceneFileName);
+    
+    const sceneContent = await fs.readFile(scenePath, 'utf8');
+    const sceneData = JSON.parse(sceneContent);
+    
+    return { success: true, data: sceneData };
+  } catch (error) {
+    console.error('Scene load error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('check-scene-exists', async (event, projectPath, sceneFileName) => {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenePath = path.join(`${projectDir}_scenes`, sceneFileName);
+    
+    await fs.access(scenePath);
+    return { exists: true };
+  } catch {
+    return { exists: false };
+  }
+});
+
+ipcMain.handle('save-new-scene', async (event, projectPath) => {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenesDir = `${projectDir}_scenes`;
+    
+    // scenesディレクトリが存在しない場合は作成
+    try {
+      await fs.access(scenesDir);
+    } catch {
+      await fs.mkdir(scenesDir, { recursive: true });
+    }
+    
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '新規シーンを作成',
+      defaultPath: path.join(scenesDir, '新規シーン.json'),
+      filters: [
+        { name: 'Scene Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) {
+      return { success: false };
+    }
+    
+    // ファイル名からシーン名を抽出（拡張子を除去）
+    const fileName = path.basename(result.filePath);
+    const sceneName = fileName.replace(/\.json$/, '');
+    
+    return { 
+      success: true, 
+      path: result.filePath,
+      sceneName: sceneName,
+      fileName: fileName
+    };
+  } catch (error) {
+    console.error('Save new scene error:', error);
+    return { success: false, error: error.message };
+  }
+});

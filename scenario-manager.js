@@ -4,11 +4,13 @@ import { ProjectManager } from './modules/project-manager.js';
 import { ParagraphManager } from './modules/paragraph-manager.js';
 import { UIManager } from './modules/ui-manager.js';
 import { PreviewManager } from './modules/preview-manager.js';
+import { SceneManager } from './modules/scene-manager.js';
 
 class ScenarioManager {
   constructor() {
     this.blockTypeManager = new BlockTypeManager();
     this.projectManager = new ProjectManager();
+    this.sceneManager = new SceneManager();
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
@@ -20,6 +22,11 @@ class ScenarioManager {
 
   initializeUI() {
     this.uiManager.generateTypeUI();
+    // 初期状態でデフォルトシーンを作成
+    const defaultScene = this.sceneManager.createScene('メインシーン');
+    this.sceneManager.selectScene(defaultScene.id);
+    this.uiManager.renderSceneList(this.sceneManager.getScenes(), defaultScene.id, (sceneId) => this.selectScene(sceneId));
+    this.uiManager.updateCurrentSceneName(defaultScene.name);
   }
 
   bindEvents() {
@@ -31,6 +38,7 @@ class ScenarioManager {
     document.getElementById('export-csv').addEventListener('click', () => this.exportCSV());
     document.getElementById('preview-novel').addEventListener('click', () => this.previewManager.showPreview());
     document.getElementById('reload-schema').addEventListener('click', () => this.reloadSchema());
+    document.getElementById('add-scene').addEventListener('click', () => this.addScene());
     
     const editorContent = this.uiManager.getEditorContent();
     const tagsInput = this.uiManager.getTagsInput();
@@ -90,23 +98,53 @@ class ScenarioManager {
   }
 
   async newProject() {
-    const paragraphs = this.paragraphManager.getParagraphs();
-    if (paragraphs.length > 0) {
+    const hasChanges = this.projectManager.hasChanges();
+    if (hasChanges || this.paragraphManager.getParagraphs().length > 0) {
       const confirmed = confirm('現在のプロジェクトを破棄して新規作成しますか？');
       if (!confirmed) return;
     }
     
+    // 新規プロジェクトをセットアップ
+    this.sceneManager.clearScenes();
+    const defaultScene = this.sceneManager.createScene('メインシーン');
+    this.sceneManager.selectScene(defaultScene.id);
+    
     this.paragraphManager.setParagraphs([]);
     await this.projectManager.newProject();
+    
+    this.uiManager.renderSceneList(this.sceneManager.getScenes(), defaultScene.id, (sceneId) => this.selectScene(sceneId));
+    this.uiManager.updateCurrentSceneName(defaultScene.name);
     this.uiManager.renderParagraphList();
     this.uiManager.showPlaceholder();
     this.updateTitle();
   }
 
   async saveProject() {
-    const paragraphs = this.paragraphManager.getParagraphs();
-    const result = await this.projectManager.saveProject(paragraphs);
+    // 現在のシーンを保存
+    await this.saveCurrentScene();
+    
+    // プロジェクトファイルを保存
+    const sceneList = this.sceneManager.getSceneListForProject();
+    const currentSceneId = this.sceneManager.getCurrentSceneId();
+    const result = await this.projectManager.saveProject(sceneList, currentSceneId);
+    
     if (result.success) {
+      this.sceneManager.setProjectPath(result.path);
+      
+      // すべてのシーンを保存
+      const scenes = this.sceneManager.getScenes();
+      for (const scene of scenes) {
+        if (scene.paragraphs && scene.paragraphs.length > 0) {
+          await window.electronAPI.saveScene(result.path, scene.id, {
+            id: scene.id,
+            name: scene.name,
+            fileName: scene.fileName,
+            paragraphs: scene.paragraphs
+          });
+          this.sceneManager.markSceneAsExisting(scene.id, true);
+        }
+      }
+      
       this.updateTitle();
     }
   }
@@ -115,16 +153,45 @@ class ScenarioManager {
     const result = await this.projectManager.openProject();
     
     if (result.success) {
-      this.paragraphManager.setParagraphs(result.data.paragraphs || []);
+      this.sceneManager.setProjectPath(result.path);
       
       // スキーマファイルをロード
       await this.blockTypeManager.loadSchemaFile(result.path, result.schemaFile);
       
-      // UIを再生成してからデータを表示
+      // シーンリストをロード
+      this.sceneManager.loadScenesFromProject(result.data.scenes || []);
+      
+      // 各シーンの存在確認
+      const scenes = this.sceneManager.getScenes();
+      for (const scene of scenes) {
+        const checkResult = await window.electronAPI.checkSceneExists(result.path, scene.fileName);
+        this.sceneManager.markSceneAsExisting(scene.id, checkResult.exists);
+      }
+      
+      // レガシーデータの処理（v1.0.0からの移行）
+      if (result.legacyParagraphs && result.legacyParagraphs.length > 0) {
+        const defaultScene = this.sceneManager.getCurrentScene();
+        if (defaultScene) {
+          defaultScene.paragraphs = result.legacyParagraphs;
+          await window.electronAPI.saveScene(result.path, defaultScene.id, {
+            id: defaultScene.id,
+            name: defaultScene.name,
+            fileName: defaultScene.fileName,
+            paragraphs: defaultScene.paragraphs
+          });
+        }
+      }
+      
+      // 現在のシーンを選択
+      const currentSceneId = result.data.currentSceneId || (scenes.length > 0 ? scenes[0].id : null);
+      if (currentSceneId) {
+        await this.selectScene(currentSceneId);
+      }
+      
+      // UIを再生成
       this.uiManager.generateTypeUI();
       this.bindSchemaEvents();
-      this.uiManager.renderParagraphList();
-      this.uiManager.showPlaceholder();
+      this.uiManager.renderSceneList(this.sceneManager.getScenes(), currentSceneId, (sceneId) => this.selectScene(sceneId));
       this.updateTitle();
     }
   }
@@ -245,6 +312,107 @@ class ScenarioManager {
     } catch (error) {
       console.error('スキーマ再読込エラー:', error);
       alert(`スキーマの再読込に失敗しました\n\nエラー内容: ${error.message}`);
+    }
+  }
+
+  async addScene() {
+    const projectPath = this.projectManager.getProjectPath();
+    if (!projectPath) {
+      // プロジェクトが開かれていない場合は、新規プロジェクトとして開始
+      await this.newProject();
+      return;
+    }
+    
+    // ファイル保存ダイアログを開く
+    const result = await window.electronAPI.saveNewScene(projectPath);
+    if (!result.success) return;
+    
+    // 現在のシーンを保存
+    await this.saveCurrentScene();
+    
+    const newScene = this.sceneManager.createScene(result.sceneName);
+    // ファイル名を上書き
+    newScene.fileName = result.fileName;
+    
+    // 空のシーンデータを保存
+    await window.electronAPI.saveScene(projectPath, newScene.id, {
+      id: newScene.id,
+      name: newScene.name,
+      fileName: newScene.fileName,
+      paragraphs: []
+    });
+    
+    this.sceneManager.markSceneAsExisting(newScene.id, true);
+    this.sceneManager.selectScene(newScene.id);
+    this.paragraphManager.setParagraphs([]);
+    
+    this.markAsChanged();
+    this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene.id, (sceneId) => this.selectScene(sceneId));
+    this.uiManager.updateCurrentSceneName(newScene.name);
+    this.uiManager.renderParagraphList();
+    this.uiManager.showPlaceholder();
+  }
+
+  async selectScene(sceneId) {
+    // 現在のシーンを保存
+    await this.saveCurrentScene();
+    
+    const scene = this.sceneManager.selectScene(sceneId);
+    if (!scene) return;
+    
+    // シーンのデータをロード
+    const projectPath = this.projectManager.getProjectPath();
+    if (projectPath && scene.exists) {
+      try {
+        const result = await window.electronAPI.loadScene(projectPath, scene.fileName);
+        if (result.success) {
+          scene.paragraphs = result.data.paragraphs || [];
+          this.paragraphManager.setParagraphs(scene.paragraphs);
+        }
+      } catch (error) {
+        console.error('シーンの読み込みエラー:', error);
+        this.paragraphManager.setParagraphs([]);
+      }
+    } else {
+      this.paragraphManager.setParagraphs(scene.paragraphs || []);
+    }
+    
+    this.uiManager.renderSceneList(this.sceneManager.getScenes(), sceneId, (sceneId) => this.selectScene(sceneId));
+    this.uiManager.updateCurrentSceneName(scene.name);
+    this.uiManager.renderParagraphList();
+    
+    if (this.paragraphManager.getParagraphs().length > 0) {
+      const firstParagraph = this.paragraphManager.getParagraphs()[0];
+      const selected = this.paragraphManager.selectParagraph(firstParagraph.id);
+      if (selected) {
+        this.uiManager.showEditor(selected);
+        this.uiManager.updateParagraphSelection();
+      }
+    } else {
+      this.uiManager.showPlaceholder();
+    }
+  }
+
+  async saveCurrentScene() {
+    const currentScene = this.sceneManager.getCurrentScene();
+    if (!currentScene) return;
+    
+    const paragraphs = this.paragraphManager.getParagraphs();
+    this.sceneManager.updateSceneParagraphs(currentScene.id, paragraphs);
+    
+    const projectPath = this.projectManager.getProjectPath();
+    if (projectPath && paragraphs.length > 0) {
+      try {
+        await window.electronAPI.saveScene(projectPath, currentScene.id, {
+          id: currentScene.id,
+          name: currentScene.name,
+          fileName: currentScene.fileName,
+          paragraphs: paragraphs
+        });
+        this.sceneManager.markSceneAsExisting(currentScene.id, true);
+      } catch (error) {
+        console.error('シーンの保存エラー:', error);
+      }
     }
   }
 }
