@@ -46,8 +46,15 @@ header h1 {
   transition: background-color 0.2s;
 }
 
-.toolbar button:hover, .add-button:hover {
+.toolbar button:hover:not(:disabled), .add-button:hover:not(:disabled) {
   background-color: #1177bb;
+}
+
+.toolbar button:disabled, .add-button:disabled, .delete-button:disabled {
+  background-color: #555555;
+  color: #999999;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .delete-button {
@@ -56,7 +63,7 @@ header h1 {
   font-size: 0.8rem;
 }
 
-.delete-button:hover {
+.delete-button:hover:not(:disabled) {
   background-color: #cd3636;
 }
 

@@ -11,12 +11,12 @@
     <header>
       <h1>Fabulor</h1>
       <div class="toolbar">
-        <button id="new-project">新規プロジェクト</button>
+        <button id="new-project">プロジェクトを作成</button>
         <button id="open-project">プロジェクトを開く</button>
-        <button id="save-project">保存</button>
-        <button id="export-csv">CSVエクスポート</button>
-        <button id="preview-novel">プレビュー</button>
-        <button id="reload-schema">スキーマ再読込</button>
+        <button id="save-project" disabled>保存</button>
+        <button id="export-csv" disabled>CSVエクスポート</button>
+        <button id="preview-novel" disabled>プレビュー</button>
+        <button id="reload-schema" disabled>スキーマ再読込</button>
       </div>
     </header>
     
@@ -24,19 +24,19 @@
       <div class="project-sidebar">
         <h2>プロジェクト</h2>
         <div id="scene-list" class="scene-list"></div>
-        <button id="add-scene" class="add-button">+ 新規シーン</button>
+        <button id="add-scene" class="add-button" disabled>+ 新規シーン</button>
       </div>
       
       <div class="sidebar">
         <h2>ブロックリスト</h2>
         <div id="current-scene-name" class="current-scene"></div>
         <div id="paragraph-list" class="paragraph-list"></div>
-        <button id="add-paragraph" class="add-button">+ 新規ブロック</button>
+        <button id="add-paragraph" class="add-button" disabled>+ 新規ブロック</button>
       </div>
       
       <div class="editor">
         <div id="editor-placeholder" class="placeholder">
-          ブロックを選択するか、新規ブロックを作成してください
+          プロジェクトを作成または開いてください
         </div>
         <div id="editor-container" class="editor-container" style="display: none;">
           <div class="editor-header">

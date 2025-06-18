@@ -22,11 +22,9 @@ class ScenarioManager {
 
   initializeUI() {
     this.uiManager.generateTypeUI();
-    // 初期状態でデフォルトシーンを作成
-    const defaultScene = this.sceneManager.createScene('メインシーン');
-    this.sceneManager.selectScene(defaultScene.id);
-    this.uiManager.renderSceneList(this.sceneManager.getScenes(), defaultScene.id, (sceneId) => this.selectScene(sceneId));
-    this.uiManager.updateCurrentSceneName(defaultScene.name);
+    // 初期状態では編集機能を無効化
+    this.setEditingEnabled(false);
+    this.uiManager.showPlaceholder();
   }
 
   bindEvents() {
@@ -104,13 +102,46 @@ class ScenarioManager {
       if (!confirmed) return;
     }
     
+    // まずプロジェクトファイルを保存
+    const saveResult = await window.electronAPI.saveProject({
+      version: '2.0.0',
+      createdAt: new Date().toISOString(),
+      schemaFile: 'schema.yaml',
+      scenes: [{
+        id: 'main_scene',
+        name: 'メインシーン',
+        fileName: 'main_scene.json'
+      }],
+      currentSceneId: 'main_scene'
+    }, null);
+    
+    if (!saveResult.success) return;
+    
+    // プロジェクトマネージャーを更新
+    this.projectManager.setProjectPath(saveResult.path);
+    this.projectManager.markAsSaved();
+    
     // 新規プロジェクトをセットアップ
     this.sceneManager.clearScenes();
+    this.sceneManager.setProjectPath(saveResult.path);
     const defaultScene = this.sceneManager.createScene('メインシーン');
+    defaultScene.id = 'main_scene';
+    defaultScene.fileName = 'main_scene.json';
     this.sceneManager.selectScene(defaultScene.id);
     
+    // メインシーンのファイルを作成
+    await window.electronAPI.saveScene(saveResult.path, defaultScene.id, {
+      id: defaultScene.id,
+      name: defaultScene.name,
+      fileName: defaultScene.fileName,
+      paragraphs: []
+    });
+    this.sceneManager.markSceneAsExisting(defaultScene.id, true);
+    
     this.paragraphManager.setParagraphs([]);
-    await this.projectManager.newProject();
+    
+    // 編集機能を有効化
+    this.setEditingEnabled(true);
     
     this.uiManager.renderSceneList(this.sceneManager.getScenes(), defaultScene.id, (sceneId) => this.selectScene(sceneId));
     this.uiManager.updateCurrentSceneName(defaultScene.name);
@@ -134,15 +165,26 @@ class ScenarioManager {
       // すべてのシーンを保存
       const scenes = this.sceneManager.getScenes();
       for (const scene of scenes) {
-        if (scene.paragraphs && scene.paragraphs.length > 0) {
+        // 現在のシーンは最新の段落データを使用
+        if (scene.id === currentSceneId) {
+          const currentParagraphs = this.paragraphManager.getParagraphs();
           await window.electronAPI.saveScene(result.path, scene.id, {
             id: scene.id,
             name: scene.name,
             fileName: scene.fileName,
-            paragraphs: scene.paragraphs
+            paragraphs: currentParagraphs
           });
-          this.sceneManager.markSceneAsExisting(scene.id, true);
+          this.sceneManager.updateSceneParagraphs(scene.id, currentParagraphs);
+        } else {
+          // その他のシーンは保存済みのデータを使用
+          await window.electronAPI.saveScene(result.path, scene.id, {
+            id: scene.id,
+            name: scene.name,
+            fileName: scene.fileName,
+            paragraphs: scene.paragraphs || []
+          });
         }
+        this.sceneManager.markSceneAsExisting(scene.id, true);
       }
       
       this.updateTitle();
@@ -187,6 +229,9 @@ class ScenarioManager {
       if (currentSceneId) {
         await this.selectScene(currentSceneId);
       }
+      
+      // 編集機能を有効化
+      this.setEditingEnabled(true);
       
       // UIを再生成
       this.uiManager.generateTypeUI();
@@ -412,6 +457,35 @@ class ScenarioManager {
         this.sceneManager.markSceneAsExisting(currentScene.id, true);
       } catch (error) {
         console.error('シーンの保存エラー:', error);
+      }
+    }
+  }
+
+  setEditingEnabled(enabled) {
+    // 編集関連のボタンを有効/無効化
+    const editButtons = [
+      'save-project',
+      'export-csv',
+      'preview-novel',
+      'reload-schema',
+      'add-scene',
+      'add-paragraph',
+      'delete-paragraph'
+    ];
+    
+    editButtons.forEach(id => {
+      const button = document.getElementById(id);
+      if (button) {
+        button.disabled = !enabled;
+      }
+    });
+    
+    // エディタの表示/非表示
+    if (!enabled) {
+      this.uiManager.showPlaceholder();
+      const placeholder = document.getElementById('editor-placeholder');
+      if (placeholder) {
+        placeholder.textContent = 'プロジェクトを作成または開いてください';
       }
     }
   }
