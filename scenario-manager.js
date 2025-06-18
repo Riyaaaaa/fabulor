@@ -5,14 +5,16 @@ import { ParagraphManager } from './modules/paragraph-manager.js';
 import { UIManager } from './modules/ui-manager.js';
 import { PreviewManager } from './modules/preview-manager.js';
 import { SceneManager } from './modules/scene-manager.js';
+import { CharacterManager } from './modules/character-manager.js';
 
 class ScenarioManager {
   constructor() {
     this.blockTypeManager = new BlockTypeManager();
     this.projectManager = new ProjectManager();
     this.sceneManager = new SceneManager();
+    this.characterManager = new CharacterManager();
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
-    this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager);
+    this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager, this.characterManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
     
     this.initializeUI();
@@ -123,6 +125,13 @@ class ScenarioManager {
       this.uiManager.generateTypeUI();
       this.bindSchemaEvents();
     }
+
+    // キャラクターファイルを読み込み
+    if (saveResult.charactersFileName) {
+      await this.characterManager.loadCharactersFile(saveResult.path, saveResult.charactersFileName);
+      this.uiManager.generateTypeUI();
+      this.bindSchemaEvents();
+    }
     
     // 新規プロジェクトをセットアップ
     this.sceneManager.clearScenes();
@@ -190,6 +199,11 @@ class ScenarioManager {
       
       // スキーマファイルをロード
       await this.blockTypeManager.loadSchemaFile(result.path, result.schemaFile);
+
+      // キャラクターファイルをロード（プロジェクト名ベース）
+      const projectName = result.path.split('/').pop().replace('.fbl', '');
+      const charactersFileName = `${projectName}_characters.yaml`;
+      await this.characterManager.loadCharactersFile(result.path, charactersFileName);
       
       // シーンリストをロード
       this.sceneManager.loadScenesFromProject(result.data.scenes || []);

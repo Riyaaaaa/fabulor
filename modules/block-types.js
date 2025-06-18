@@ -9,9 +9,15 @@ class BlockTypeManager {
         requires_text: true,
         parameters: {
           speaker: {
-            type: 'text',
+            type: 'character_select',
             label: '話者',
             placeholder: 'キャラクター名',
+            default: '',
+            required: false
+          },
+          emotion: {
+            type: 'emotion_select',
+            label: '感情',
             default: '',
             required: false
           }

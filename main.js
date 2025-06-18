@@ -70,6 +70,23 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
 block_types:
   # カスタムブロックタイプをここに定義してください
 `;
+
+    // デフォルトのキャラクター定義
+    const defaultCharactersContent = `# キャラクター定義ファイル
+# このファイルでキャラクターとその感情を定義できます
+
+characters:
+  # 例:
+  # main_character:
+  #   name: "主人公"
+  #   emotions:
+  #     - value: "normal"
+  #       label: "通常"
+  #     - value: "happy"
+  #       label: "喜び"
+  #     - value: "sad"
+  #       label: "悲しみ"
+`;
     
     // スキーマファイルが存在しない場合のみ作成
     try {
@@ -77,8 +94,18 @@ block_types:
     } catch {
       await fs.writeFile(schemaPath, defaultSchemaContent, 'utf8');
     }
+
+    // キャラクターファイルを作成
+    const charactersFileName = `${projectName}_characters.yaml`;
+    const charactersPath = path.join(projectDir, charactersFileName);
     
-    return { success: true, path: filePath, schemaFileName: schemaFileName };
+    try {
+      await fs.access(charactersPath);
+    } catch {
+      await fs.writeFile(charactersPath, defaultCharactersContent, 'utf8');
+    }
+    
+    return { success: true, path: filePath, schemaFileName: schemaFileName, charactersFileName: charactersFileName };
   } catch (error) {
     console.error('Save error:', error);
     return { success: false, error: error.message };
@@ -145,6 +172,20 @@ ipcMain.handle('load-schema-file', async (event, projectPath, schemaFileName) =>
     return { success: true, data: schemaData };
   } catch (error) {
     console.error('Schema file load error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('load-characters-file', async (event, projectPath, charactersFileName) => {
+  try {
+    const projectDir = path.dirname(projectPath);
+    const charactersPath = path.join(projectDir, charactersFileName);
+    const yamlContent = await fs.readFile(charactersPath, 'utf8');
+    const charactersData = yaml.load(yamlContent);
+    
+    return { success: true, data: charactersData };
+  } catch (error) {
+    console.error('Characters file load error:', error);
     return { success: false, error: error.message };
   }
 });

@@ -1,9 +1,10 @@
 // UI管理モジュール
 class UIManager {
-  constructor(blockTypeManager, paragraphManager, projectManager) {
+  constructor(blockTypeManager, paragraphManager, projectManager, characterManager) {
     this.blockTypeManager = blockTypeManager;
     this.paragraphManager = paragraphManager;
     this.projectManager = projectManager;
+    this.characterManager = characterManager;
     this.typeParamContainers = {};
     this.typeParams = {};
     
@@ -86,6 +87,23 @@ class UIManager {
               optionElement.textContent = option.label;
               inputElement.appendChild(optionElement);
             });
+          } else if (paramDef.type === 'character_select') {
+            // キャラクター選択用のセレクト
+            inputElement = document.createElement('select');
+            this.populateCharacterSelect(inputElement);
+            
+            // キャラクター選択時に感情セレクトを更新
+            inputElement.addEventListener('change', () => {
+              this.handleCharacterSelectionChange(inputElement.value, typeKey);
+            });
+          } else if (paramDef.type === 'emotion_select') {
+            // 感情選択用のセレクト
+            inputElement = document.createElement('select');
+            // 初期状態では空の感情リスト
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = 'なし';
+            inputElement.appendChild(emptyOption);
           }
 
           inputElement.id = `${typeKey}-${paramKey}`;
@@ -280,6 +298,45 @@ class UIManager {
   updateCurrentSceneName(sceneName) {
     if (this.currentSceneName) {
       this.currentSceneName.textContent = sceneName ? `現在のシーン: ${sceneName}` : 'シーンが選択されていません';
+    }
+  }
+
+  populateCharacterSelect(selectElement) {
+    // 空のオプションを追加
+    const emptyOption = document.createElement('option');
+    emptyOption.value = '';
+    emptyOption.textContent = 'キャラクターを選択';
+    selectElement.appendChild(emptyOption);
+
+    // キャラクターオプションを追加
+    const characterOptions = this.characterManager.getCharacterOptions();
+    characterOptions.forEach(option => {
+      const optionElement = document.createElement('option');
+      optionElement.value = option.value;
+      optionElement.textContent = option.label;
+      selectElement.appendChild(optionElement);
+    });
+  }
+
+  updateEmotionSelect(characterId, emotionSelectElement) {
+    // 既存のオプションをクリア
+    emotionSelectElement.innerHTML = '';
+
+    // 感情オプションを追加
+    const emotionOptions = this.characterManager.getEmotionOptions(characterId);
+    emotionOptions.forEach(option => {
+      const optionElement = document.createElement('option');
+      optionElement.value = option.value;
+      optionElement.textContent = option.label;
+      emotionSelectElement.appendChild(optionElement);
+    });
+  }
+
+  handleCharacterSelectionChange(characterId, typeKey) {
+    // 対応する感情セレクトを更新
+    const emotionSelect = this.typeParams[typeKey]['emotion'];
+    if (emotionSelect) {
+      this.updateEmotionSelect(characterId, emotionSelect);
     }
   }
 }
