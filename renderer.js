@@ -376,7 +376,7 @@ class ScenarioManager {
         this.selectedParagraphId = null;
         
         // スキーマファイルをロード
-        const schemaFile = result.data.schemaFile || 'block-types.yaml';
+        const schemaFile = result.data.schemaFile || 'schema.yaml';
         await this.loadSchemaFile(result.path, schemaFile);
         
         // UIを再生成してからデータを表示
