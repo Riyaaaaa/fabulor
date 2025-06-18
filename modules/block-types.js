@@ -1,9 +1,33 @@
 // ブロックタイプ管理モジュール
 class BlockTypeManager {
   constructor() {
+    // 標準定義のブロックタイプ
+    this.standardTypes = {
+      dialogue: {
+        label: 'セリフ',
+        description: 'キャラクターの台詞',
+        requires_text: true,
+        parameters: {
+          speaker: {
+            type: 'text',
+            label: '話者',
+            placeholder: 'キャラクター名',
+            default: '',
+            required: false
+          }
+        }
+      },
+      narrative: {
+        label: '地の文',
+        description: '小説の地の文・説明文',
+        requires_text: true,
+        parameters: {}
+      }
+    };
+    
+    // デフォルトのブロックタイプ（標準定義を含む）
     this.blockTypes = {
-      dialogue: { label: 'セリフ', requires_text: true, parameters: {} },
-      narrative: { label: '地の文', requires_text: true, parameters: {} },
+      ...this.standardTypes,
       command: { label: 'コマンド', requires_text: false, parameters: {} }
     };
   }
@@ -13,14 +37,28 @@ class BlockTypeManager {
       console.log("Loading schema file:", schemaFileName);
       const result = await window.electronAPI.loadSchemaFile(projectPath, schemaFileName);
       if (result.success) {
-        this.blockTypes = result.data.block_types;
+        // スキーマファイルから読み込んだタイプをマージ（標準定義は常に含む）
+        const loadedTypes = result.data.block_types || {};
+        
+        // 標準定義のタイプを除外してカスタムタイプのみ取得
+        const customTypes = {};
+        Object.entries(loadedTypes).forEach(([key, value]) => {
+          if (key !== 'dialogue' && key !== 'narrative') {
+            customTypes[key] = value;
+          }
+        });
+        
+        // 標準定義 + カスタムタイプ
+        this.blockTypes = {
+          ...this.standardTypes,
+          ...customTypes
+        };
       } else {
         console.error('スキーマファイルの読み込みに失敗:', result.error);
         alert(`スキーマファイル "${schemaFileName}" の読み込みに失敗しました。デフォルト設定を使用します。`);
-        // フォールバック用のデフォルト設定
+        // フォールバック用のデフォルト設定（標準定義を含む）
         this.blockTypes = {
-          dialogue: { label: 'セリフ', requires_text: true, parameters: {} },
-          narrative: { label: '地の文', requires_text: true, parameters: {} },
+          ...this.standardTypes,
           command: { label: 'コマンド', requires_text: false, parameters: {} }
         };
       }

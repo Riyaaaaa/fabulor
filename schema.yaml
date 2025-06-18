@@ -1,44 +1,8 @@
 # ブロックタイプ定義ファイル
-# このファイルでブロックのタイプとパラメータを定義できます
+# このファイルでカスタムブロックタイプを定義できます
+# 注意: 「dialogue（セリフ）」と「narrative（地の文）」は標準定義として常に含まれます
 
 block_types:
-  dialogue:
-    label: "セリフ"
-    description: "キャラクターの台詞"
-    requires_text: true
-    parameters:
-      speaker:
-        type: "text"
-        label: "話者"
-        placeholder: "キャラクター名"
-        default: ""
-        required: false
-      emotion:
-        type: "select"
-        label: "感情"
-        default: ""
-        required: false
-        options:
-          - value: ""
-            label: "なし"
-          - value: "happy"
-            label: "喜び"
-          - value: "sad"
-            label: "悲しみ"
-          - value: "angry"
-            label: "怒り"
-          - value: "surprised"
-            label: "驚き"
-          - value: "calm"
-            label: "冷静"
-          - value: "excited"
-            label: "興奮"
-    
-  narrative:
-    label: "地の文"
-    description: "小説の地の文・説明文"
-    requires_text: true
-    parameters: {}
     
   command:
     label: "コマンド"

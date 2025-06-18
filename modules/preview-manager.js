@@ -50,7 +50,10 @@ class PreviewManager {
         paragraphDiv.classList.add('dialogue');
       }
       
-      paragraphDiv.textContent = paragraph.text;
+      // 改行を<br>タグに変換してHTMLとして設定（HTMLエスケープも行う）
+      const escapedText = this.escapeHtml(paragraph.text);
+      const textWithBreaks = escapedText.replace(/\n/g, '<br>');
+      paragraphDiv.innerHTML = textWithBreaks;
       previewContent.appendChild(paragraphDiv);
     });
   }
@@ -75,11 +78,20 @@ class PreviewManager {
       
       const textDiv = document.createElement('div');
       textDiv.className = 'text';
-      textDiv.textContent = paragraph.text;
+      // 改行を<br>タグに変換してHTMLとして設定（HTMLエスケープも行う）
+      const escapedText = this.escapeHtml(paragraph.text);
+      const textWithBreaks = escapedText.replace(/\n/g, '<br>');
+      textDiv.innerHTML = textWithBreaks;
       paragraphDiv.appendChild(textDiv);
       
       previewContent.appendChild(paragraphDiv);
     });
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 }
 
