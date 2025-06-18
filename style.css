@@ -183,6 +183,10 @@ main {
   cursor: not-allowed;
 }
 
+.editor-content[style*="display: none"] + .metadata {
+  margin-top: 0;
+}
+
 .metadata {
   margin-top: 1rem;
   display: flex;

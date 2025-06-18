@@ -30,6 +30,7 @@ class ScenarioManager {
     document.getElementById('open-project').addEventListener('click', () => this.openProject());
     document.getElementById('export-json').addEventListener('click', () => this.exportJSON());
     document.getElementById('preview-novel').addEventListener('click', () => this.previewManager.showPreview());
+    document.getElementById('reload-schema').addEventListener('click', () => this.reloadSchema());
     
     const editorContent = this.uiManager.getEditorContent();
     const tagsInput = this.uiManager.getTagsInput();
@@ -142,10 +143,10 @@ class ScenarioManager {
     // ブロックタイプ定義に基づいてテキスト入力を制御
     const blockType = this.blockTypeManager.getBlockType(newType);
     if (blockType && !blockType.requires_text) {
-      editorContent.disabled = true;
-      editorContent.placeholder = `${blockType.label}にテキストは不要です`;
+      editorContent.style.display = 'none';
       editorContent.value = '';
     } else {
+      editorContent.style.display = 'block';
       editorContent.disabled = false;
       editorContent.placeholder = 'ここにテキストを入力...';
     }
@@ -205,6 +206,46 @@ class ScenarioManager {
 
   updateTitle() {
     this.projectManager.updateTitle();
+  }
+
+  async reloadSchema() {
+    try {
+      const projectPath = this.projectManager.getProjectPath();
+      if (!projectPath) {
+        alert('プロジェクトを開いてからスキーマを再読込してください');
+        return;
+      }
+
+      // 現在の選択状態を保存
+      const selectedId = this.paragraphManager.getSelectedParagraphId();
+      
+      // スキーマファイル名を取得
+      const schemaFileName = this.projectManager.getCurrentSchemaFile();
+      
+      // スキーマをリロード
+      await this.blockTypeManager.loadSchemaFile(projectPath, schemaFileName);
+      
+      // UIを再生成
+      this.uiManager.generateTypeUI();
+      this.bindSchemaEvents();
+      
+      // リストを再描画
+      this.uiManager.renderParagraphList();
+      
+      // 選択状態を復元
+      if (selectedId) {
+        const paragraph = this.paragraphManager.selectParagraph(selectedId);
+        if (paragraph) {
+          this.uiManager.showEditor(paragraph);
+          this.uiManager.updateParagraphSelection();
+        }
+      }
+      
+      alert('スキーマファイルを再読込しました');
+    } catch (error) {
+      console.error('スキーマ再読込エラー:', error);
+      alert(`スキーマの再読込に失敗しました\n\nエラー内容: ${error.message}`);
+    }
   }
 }
 

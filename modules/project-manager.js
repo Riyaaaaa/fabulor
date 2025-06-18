@@ -3,6 +3,7 @@ class ProjectManager {
   constructor() {
     this.projectPath = null;
     this.hasUnsavedChanges = false;
+    this.currentSchemaFile = 'block-types.yaml';
   }
 
   setProjectPath(path) {
@@ -25,6 +26,10 @@ class ProjectManager {
     return this.hasUnsavedChanges;
   }
 
+  getCurrentSchemaFile() {
+    return this.currentSchemaFile;
+  }
+
   async newProject() {
     this.projectPath = null;
     this.hasUnsavedChanges = false;
@@ -36,7 +41,7 @@ class ProjectManager {
       const projectData = {
         version: '1.0.0',
         createdAt: new Date().toISOString(),
-        schemaFile: 'block-types.yaml',
+        schemaFile: this.currentSchemaFile,
         paragraphs: paragraphs
       };
       
@@ -63,11 +68,12 @@ class ProjectManager {
       if (result.success) {
         this.projectPath = result.path;
         this.hasUnsavedChanges = false;
+        this.currentSchemaFile = result.data.schemaFile || 'schema.yaml';
         return {
           success: true,
           data: result.data,
           path: result.path,
-          schemaFile: result.data.schemaFile || 'schema.yaml'
+          schemaFile: this.currentSchemaFile
         };
       }
       return { success: false };

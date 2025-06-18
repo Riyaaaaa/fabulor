@@ -116,10 +116,10 @@ class UIManager {
     // ブロックタイプ定義に基づいてテキスト入力を制御
     const blockType = this.blockTypeManager.getBlockType(paragraph.type);
     if (blockType && !blockType.requires_text) {
-      this.editorContent.disabled = true;
-      this.editorContent.placeholder = `${blockType.label}にテキストは不要です`;
+      this.editorContent.style.display = 'none';
       this.editorContent.value = '';
     } else {
+      this.editorContent.style.display = 'block';
       this.editorContent.disabled = false;
       this.editorContent.placeholder = 'ここにテキストを入力...';
     }
