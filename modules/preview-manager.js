@@ -99,6 +99,56 @@ class PreviewManager {
     div.textContent = text;
     return div.innerHTML;
   }
+
+  // テキスト形式でのプレビュー内容生成
+  generateTextContent(format = 'novel') {
+    const paragraphs = this.paragraphManager.getParagraphs();
+    if (paragraphs.length === 0) {
+      return '';
+    }
+
+    let textContent = '';
+    
+    if (format === 'novel') {
+      paragraphs.forEach(paragraph => {
+        if (!paragraph.text.trim()) return;
+        
+        // セリフタイプのブロックは話者の有無に関わらず鍵カッコを表示
+        if (paragraph.type === 'dialogue') {
+          // 末尾の改行や空行を除去
+          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          textContent += `「${trimmedText}」\n\n`;
+        } else {
+          // 地の文など
+          // 末尾の改行や空行を除去
+          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          textContent += `${trimmedText}\n\n`;
+        }
+      });
+    } else if (format === 'script') {
+      paragraphs.forEach(paragraph => {
+        if (!paragraph.text.trim()) return;
+        
+        // セリフタイプの場合は話者名を表示（設定されている場合のみ）
+        if (paragraph.type === 'dialogue' && paragraph.speaker && paragraph.speaker.trim()) {
+          textContent += `${paragraph.speaker}：\n`;
+        }
+        
+        // 末尾の改行や空行を除去
+        const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+        
+        // セリフの場合は台本形式では鍵カッコなし、地の文の場合はそのまま
+        if (paragraph.type === 'dialogue') {
+          textContent += `${trimmedText}\n\n`;
+        } else {
+          textContent += `${trimmedText}\n\n`;
+        }
+      });
+    }
+    
+    return textContent.trim();
+  }
+
 }
 
 export { PreviewManager };

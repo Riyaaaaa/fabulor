@@ -13,7 +13,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   importTextFile: () => ipcRenderer.invoke('import-text-file'),
   getRecentProjects: () => ipcRenderer.invoke('get-recent-projects'),
   openRecentProject: (projectPath) => ipcRenderer.invoke('open-recent-project', projectPath),
-  exportAllScenesAsCSV: (projectPath, scenes, blockTypes) => ipcRenderer.invoke('export-all-scenes-as-csv', projectPath, scenes, blockTypes)
+  exportAllScenesAsCSV: (projectPath, scenes, blockTypes) => ipcRenderer.invoke('export-all-scenes-as-csv', projectPath, scenes, blockTypes),
+  exportText: (textContent, format) => ipcRenderer.invoke('export-text', textContent, format),
+  exportAllScenesAsText: (projectPath, sceneTexts, format) => ipcRenderer.invoke('export-all-scenes-as-text', projectPath, sceneTexts, format)
 });
 
 window.addEventListener('DOMContentLoaded', () => {

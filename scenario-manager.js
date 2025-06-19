@@ -46,6 +46,7 @@ class ScenarioManager {
     document.getElementById('save-project').addEventListener('click', () => this.saveProject());
     document.getElementById('open-project').addEventListener('click', () => this.openProject());
     document.getElementById('export-csv').addEventListener('click', () => this.exportCSV());
+    document.getElementById('export-text').addEventListener('click', () => this.exportText());
     document.getElementById('preview-novel').addEventListener('click', () => this.previewManager.showPreview());
     document.getElementById('reload-schema').addEventListener('click', () => this.reloadSchema());
     document.getElementById('add-scene').addEventListener('click', () => this.addScene());
@@ -425,6 +426,212 @@ class ScenarioManager {
     await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, blockTypes);
   }
 
+  async exportText() {
+    const projectPath = this.projectManager.getProjectPath();
+    if (!projectPath) {
+      alert('プロジェクトが保存されていません。先にプロジェクトを保存してください。');
+      return;
+    }
+
+    // 現在のシーンを保存してから全シーンをエクスポート
+    await this.saveCurrentScene();
+    
+    const scenes = this.sceneManager.getScenes();
+    if (scenes.length === 0) {
+      alert('エクスポートするシーンがありません。');
+      return;
+    }
+
+    // フォーマット選択のダイアログを表示
+    const format = await this.showFormatSelectionDialog();
+    if (!format) return; // キャンセルされた場合
+
+    // 全シーンをテキストエクスポート
+    await this.exportAllScenesAsText(projectPath, scenes, format);
+  }
+
+  showFormatSelectionDialog() {
+    return new Promise((resolve) => {
+      // モーダルダイアログを作成
+      const modal = document.createElement('div');
+      modal.className = 'modal show';
+      modal.style.display = 'flex';
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = `
+        background: #2d2d30;
+        border-radius: 8px;
+        padding: 2rem;
+        max-width: 400px;
+        text-align: center;
+        border: 1px solid #3e3e42;
+      `;
+      
+      const title = document.createElement('h2');
+      title.textContent = 'エクスポート形式を選択';
+      title.style.cssText = 'color: #ffffff; margin-bottom: 1.5rem; font-size: 1.2rem;';
+      
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'display: flex; gap: 1rem; justify-content: center; margin-bottom: 1rem;';
+      
+      const novelButton = document.createElement('button');
+      novelButton.textContent = '小説形式';
+      novelButton.className = 'add-button';
+      novelButton.style.cssText = 'flex: 1; padding: 1rem; font-size: 1rem;';
+      
+      const scriptButton = document.createElement('button');
+      scriptButton.textContent = '台本形式';
+      scriptButton.className = 'add-button';
+      scriptButton.style.cssText = 'flex: 1; padding: 1rem; font-size: 1rem;';
+      
+      const cancelButton = document.createElement('button');
+      cancelButton.textContent = 'キャンセル';
+      cancelButton.style.cssText = `
+        background: #666666;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        margin-top: 0.5rem;
+      `;
+      
+      buttonContainer.appendChild(novelButton);
+      buttonContainer.appendChild(scriptButton);
+      
+      modalContent.appendChild(title);
+      modalContent.appendChild(buttonContainer);
+      modalContent.appendChild(cancelButton);
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      
+      const cleanup = () => {
+        document.body.removeChild(modal);
+      };
+      
+      novelButton.addEventListener('click', () => {
+        cleanup();
+        resolve('novel');
+      });
+      
+      scriptButton.addEventListener('click', () => {
+        cleanup();
+        resolve('script');
+      });
+      
+      cancelButton.addEventListener('click', () => {
+        cleanup();
+        resolve(null);
+      });
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          cleanup();
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  async exportAllScenesAsText(projectPath, scenes, format) {
+    try {
+      // 各シーンのテキストを生成
+      const sceneTexts = [];
+      
+      for (const scene of scenes) {
+        if (!scene.exists) {
+          console.warn(`シーンファイルが存在しません: ${scene.fileName}`);
+          continue;
+        }
+        
+        try {
+          // シーンデータを読み込み
+          const result = await window.electronAPI.loadScene(projectPath, scene.fileName);
+          if (!result.success || !result.data.paragraphs) {
+            console.warn(`シーン \"${scene.name}\" のデータが読み込めませんでした`);
+            continue;
+          }
+          
+          // テキストコンテンツを生成
+          const textContent = this.generateSceneTextContent(result.data.paragraphs, format);
+          
+          sceneTexts.push({
+            name: scene.name,
+            fileName: scene.fileName,
+            content: textContent
+          });
+        } catch (error) {
+          console.error(`シーン \"${scene.name}\" の処理中にエラー:`, error);
+        }
+      }
+      
+      if (sceneTexts.length === 0) {
+        alert('エクスポートできるシーンがありませんでした。');
+        return;
+      }
+      
+      // メインプロセスに全シーンのテキストエクスポートを依頼
+      const result = await window.electronAPI.exportAllScenesAsText(projectPath, sceneTexts, format);
+      
+      if (result.success) {
+        alert(`全シーンのテキストエクスポートが完了しました。\n\n出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}`);
+      } else {
+        const errorMessage = result.error || '不明なエラー';
+        alert(`テキストエクスポートに失敗しました\n\nエラー内容: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('全シーンテキストエクスポートエラー:', error);
+      alert(`テキストエクスポートに失敗しました\n\nエラー内容: ${error.message}`);
+    }
+  }
+
+  generateSceneTextContent(paragraphs, format) {
+    if (!paragraphs || paragraphs.length === 0) {
+      return '';
+    }
+
+    let textContent = '';
+    
+    if (format === 'novel') {
+      paragraphs.forEach(paragraph => {
+        if (!paragraph.text || !paragraph.text.trim()) return;
+        
+        // セリフタイプのブロックは話者の有無に関わらず鍵カッコを表示
+        if (paragraph.type === 'dialogue') {
+          // 末尾の改行や空行を除去
+          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          textContent += `「${trimmedText}」\n\n`;
+        } else {
+          // 地の文など
+          // 末尾の改行や空行を除去
+          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          textContent += `${trimmedText}\n\n`;
+        }
+      });
+    } else if (format === 'script') {
+      paragraphs.forEach(paragraph => {
+        if (!paragraph.text || !paragraph.text.trim()) return;
+        
+        // セリフタイプの場合は話者名を表示（設定されている場合のみ）
+        if (paragraph.type === 'dialogue' && paragraph.speaker && paragraph.speaker.trim()) {
+          textContent += `${paragraph.speaker}：\n`;
+        }
+        
+        // 末尾の改行や空行を除去
+        const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+        
+        // セリフの場合は台本形式では鍵カッコなし、地の文の場合はそのまま
+        if (paragraph.type === 'dialogue') {
+          textContent += `${trimmedText}\n\n`;
+        } else {
+          textContent += `${trimmedText}\n\n`;
+        }
+      });
+    }
+    
+    return textContent.trim();
+  }
+
   onTypeChange() {
     const typeSelect = this.uiManager.getTypeSelect();
     const editorContent = this.uiManager.getEditorContent();
@@ -666,6 +873,7 @@ class ScenarioManager {
     const editButtons = [
       'save-project',
       'export-csv',
+      'export-text',
       'preview-novel',
       'reload-schema',
       'add-scene',

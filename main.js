@@ -634,6 +634,73 @@ function escapeCSVValue(value) {
   return stringValue;
 }
 
+ipcMain.handle('export-text', async (event, textContent, format) => {
+  try {
+    const formatLabel = format === 'novel' ? '小説' : '台本';
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: `テキストエクスポート (${formatLabel}形式)`,
+      defaultPath: `シナリオ_${formatLabel}.txt`,
+      filters: [
+        { name: 'Text Files', extensions: ['txt'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) {
+      return { success: false, cancelled: true };
+    }
+    
+    await fs.writeFile(result.filePath, textContent, 'utf8');
+    
+    return { success: true, path: result.filePath };
+  } catch (error) {
+    console.error('Text export error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('export-all-scenes-as-text', async (event, projectPath, sceneTexts, format) => {
+  try {
+    const projectDir = path.dirname(projectPath);
+    const outputDir = path.join(projectDir, 'output');
+    
+    // outputディレクトリを作成（存在しない場合）
+    try {
+      await fs.mkdir(outputDir, { recursive: true });
+    } catch (error) {
+      console.error('outputディレクトリ作成エラー:', error);
+    }
+    
+    let successCount = 0;
+    const formatSuffix = format === 'novel' ? 'novel' : 'script';
+    
+    for (const scene of sceneTexts) {
+      try {
+        // ファイル名をサニタイズ（無効な文字を除去）
+        const sanitizedName = scene.name.replace(/[<>:"/\\|?*]/g, '_');
+        const fileName = `${sanitizedName}_${formatSuffix}.txt`;
+        const filePath = path.join(outputDir, fileName);
+        
+        await fs.writeFile(filePath, scene.content, 'utf8');
+        successCount++;
+        
+        console.log(`テキストエクスポート完了: ${fileName}`);
+      } catch (error) {
+        console.error(`シーン \"${scene.name}\" のエクスポート中にエラー:`, error);
+      }
+    }
+    
+    return {
+      success: true,
+      outputDir: outputDir,
+      fileCount: successCount
+    };
+  } catch (error) {
+    console.error('全シーンテキストエクスポートエラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // アプリケーションイベント処理
 app.whenReady().then(async () => {
   await loadRecentProjects();
