@@ -141,9 +141,9 @@ class ProjectManager {
     }
   }
 
-  async exportAllScenesAsCSV(projectPath, scenes, blockTypeManager) {
+  async exportAllScenesAsCSV(projectPath, scenes, blockTypes) {
     try {
-      const result = await window.electronAPI.exportAllScenesAsCSV(projectPath, scenes, blockTypeManager);
+      const result = await window.electronAPI.exportAllScenesAsCSV(projectPath, scenes, blockTypes);
       
       if (result.success) {
         alert(`全シーンのCSVエクスポートが完了しました。\n\n出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}`);

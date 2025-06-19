@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   importTextFile: () => ipcRenderer.invoke('import-text-file'),
   getRecentProjects: () => ipcRenderer.invoke('get-recent-projects'),
   openRecentProject: (projectPath) => ipcRenderer.invoke('open-recent-project', projectPath),
-  exportAllScenesAsCSV: (projectPath, scenes, blockTypeManager) => ipcRenderer.invoke('export-all-scenes-as-csv', projectPath, scenes, blockTypeManager)
+  exportAllScenesAsCSV: (projectPath, scenes, blockTypes) => ipcRenderer.invoke('export-all-scenes-as-csv', projectPath, scenes, blockTypes)
 });
 
 window.addEventListener('DOMContentLoaded', () => {

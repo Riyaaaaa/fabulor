@@ -407,7 +407,10 @@ class ScenarioManager {
       return;
     }
     
-    await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, this.blockTypeManager);
+    // ブロックタイプ定義を取得
+    const blockTypes = this.blockTypeManager.getBlockTypes();
+    
+    await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, blockTypes);
   }
 
   onTypeChange() {

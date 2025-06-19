@@ -394,7 +394,7 @@ ipcMain.handle('open-recent-project', async (event, projectPath) => {
 });
 
 // 全シーンをCSVとしてエクスポート
-ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, blockTypeManager) => {
+ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, blockTypes) => {
   try {
     // プロジェクトファイルと同じ階層にoutputディレクトリを作成
     const projectDir = path.dirname(projectPath);
@@ -429,7 +429,7 @@ ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, bl
         }
         
         // CSVデータを生成
-        const csvData = generateCSVData(sceneParagraphs, blockTypeManager);
+        const csvData = generateCSVData(sceneParagraphs, blockTypes);
         
         // ファイル名を作成（シーン名から危険な文字を除去）
         const safeSceneName = scene.name.replace(/[<>:"/\\|?*]/g, '_');
@@ -474,11 +474,16 @@ async function loadSceneData(projectPath, sceneFileName) {
 }
 
 // CSVデータを生成するヘルパー関数
-function generateCSVData(paragraphs, blockTypeManager) {
+function generateCSVData(paragraphs, blockTypes) {
+  // ブロックタイプを取得するヘルパー関数
+  function getBlockType(typeName) {
+    return blockTypes[typeName] || null;
+  }
+  
   // 最大のArg数を計算
   let maxArgs = 0;
   paragraphs.forEach(paragraph => {
-    const blockType = blockTypeManager.getBlockType(paragraph.type);
+    const blockType = getBlockType(paragraph.type);
     let argCount = 0;
     
     if (blockType && blockType.parameters) {
@@ -511,7 +516,7 @@ function generateCSVData(paragraphs, blockTypeManager) {
     row.push(escapeCSVValue(tags));
     
     // Args
-    const blockType = blockTypeManager.getBlockType(paragraph.type);
+    const blockType = getBlockType(paragraph.type);
     let argIndex = 0;
     
     // パラメータを追加
