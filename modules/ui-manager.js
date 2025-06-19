@@ -246,7 +246,6 @@ class UIManager {
   addDragAndDropListeners(item) {
     // ドラッグ開始
     item.addEventListener('dragstart', (e) => {
-      console.log('Drag start:', item.dataset.id);
       this.draggedElement = item;
       item.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -255,7 +254,6 @@ class UIManager {
     
     // ドラッグ終了
     item.addEventListener('dragend', (e) => {
-      console.log('Drag end:', item.dataset.id);
       item.classList.remove('dragging');
       document.querySelectorAll('.paragraph-item').forEach(el => {
         el.classList.remove('drag-over-above', 'drag-over-below');
@@ -292,14 +290,10 @@ class UIManager {
     // ドロップ
     item.addEventListener('drop', (e) => {
       e.preventDefault();
-      console.log('Drop event fired on:', item.dataset.id);
-      console.log('this.draggedElement:', this.draggedElement ? this.draggedElement.dataset.id : 'null');
       
       if (this.draggedElement && this.draggedElement !== item) {
         const draggedId = this.draggedElement.dataset.id;
         const targetId = item.dataset.id;
-        
-        console.log('Processing drop:', draggedId, '->', targetId);
         
         // マウス位置に基づいて挿入位置を決定
         const rect = item.getBoundingClientRect();
@@ -312,17 +306,9 @@ class UIManager {
           insertAfter = true;
         }
         
-        console.log('insertAfter:', insertAfter);
-        console.log('reorderParagraphHandler exists:', !!window.reorderParagraphHandler);
-        
         if (window.reorderParagraphHandler) {
-          console.log('Calling reorderParagraphHandler');
           window.reorderParagraphHandler(draggedId, targetId, insertAfter);
-        } else {
-          console.error('reorderParagraphHandler not found!');
         }
-      } else {
-        console.log('Drop ignored: same element or no dragged element');
       }
       
       item.classList.remove('drag-over-above', 'drag-over-below');

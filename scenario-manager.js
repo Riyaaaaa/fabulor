@@ -26,6 +26,9 @@ class ScenarioManager {
     this.initializeUI();
     this.bindEvents();
     this.updateTitle();
+    
+    // ブラウザのページ離脱時の確認
+    this.setupBeforeUnloadHandler();
   }
 
   async initializeUI() {
@@ -393,17 +396,10 @@ class ScenarioManager {
   }
 
   reorderParagraphs(draggedId, targetId, insertAfter = false) {
-    console.log('ScenarioManager.reorderParagraphs called:', draggedId, '->', targetId, 'insertAfter:', insertAfter);
-    const result = this.paragraphManager.reorderParagraphs(draggedId, targetId, insertAfter);
-    console.log('Reorder result:', result);
-    
-    if (result) {
-      console.log('Updating UI after successful reorder');
+    if (this.paragraphManager.reorderParagraphs(draggedId, targetId, insertAfter)) {
       this.markAsChanged();
       this.uiManager.renderParagraphList();
       this.uiManager.updateParagraphSelection();
-    } else {
-      console.log('Reorder failed');
     }
   }
 
@@ -785,6 +781,22 @@ class ScenarioManager {
       alert(`テキストインポートに失敗しました\n\nエラー内容: ${error.message}`);
     }
   }
+  
+  setupBeforeUnloadHandler() {
+    // ブラウザのページ離脱時の確認（Electronでも動作する）
+    window.addEventListener('beforeunload', (e) => {
+      if (this.projectManager.hasChanges()) {
+        // 標準的な確認ダイアログを表示
+        e.preventDefault();
+        e.returnValue = '保存されていない変更があります。このページを離れますか？';
+        return e.returnValue;
+      }
+    });
+  }
 }
 
 const scenarioManager = new ScenarioManager();
+
+// グローバル参照を作成（メインプロセスからアクセス用）
+window.scenarioManager = scenarioManager;
+window.projectManager = scenarioManager.projectManager;

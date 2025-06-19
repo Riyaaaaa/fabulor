@@ -18,6 +18,91 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+  
+  // ウィンドウを閉じる前の確認
+  mainWindow.on('close', (event) => {
+    event.preventDefault(); // 一旦閉じることを防ぐ
+    
+    // 非同期で変更状態をチェック
+    checkUnsavedChangesAndClose();
+  });
+  
+  async function checkUnsavedChangesAndClose() {
+    try {
+      // レンダラープロセスに変更があるかチェック
+      const hasUnsavedChanges = await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          try {
+            console.log('Checking hasChanges. projectManager exists:', !!window.projectManager);
+            const result = window.projectManager ? window.projectManager.hasChanges() : false;
+            console.log('hasChanges result:', result);
+            return result;
+          } catch(e) {
+            console.error('Error checking changes:', e);
+            return false;
+          }
+        })();
+      `);
+      
+      console.log('Main process received hasUnsavedChanges:', hasUnsavedChanges);
+      
+      // テスト用: 強制的にダイアログを表示する場合（デバッグ時のみ使用）
+      // const hasUnsavedChanges = true;
+      
+      if (hasUnsavedChanges) {
+        const choice = dialog.showMessageBoxSync(mainWindow, {
+          type: 'warning',
+          buttons: ['保存して終了', '保存しないで終了', 'キャンセル'],
+          defaultId: 0,
+          title: '未保存の変更',
+          message: '保存されていない変更があります。',
+          detail: 'プロジェクトを保存してから終了しますか？'
+        });
+        
+        if (choice === 0) {
+          // 保存して終了
+          try {
+            await mainWindow.webContents.executeJavaScript(`
+              (function() {
+                if (window.scenarioManager && window.scenarioManager.saveProject) {
+                  return window.scenarioManager.saveProject();
+                }
+                return Promise.resolve();
+              })();
+            `);
+            // 保存が完了したら終了
+            mainWindow.destroy();
+          } catch (error) {
+            console.error('保存エラー:', error);
+            // 保存に失敗した場合も終了するかユーザーに確認
+            const forceExit = dialog.showMessageBoxSync(mainWindow, {
+              type: 'error',
+              buttons: ['強制終了', 'キャンセル'],
+              defaultId: 1,
+              title: '保存エラー',
+              message: 'プロジェクトの保存に失敗しました。',
+              detail: 'それでも終了しますか？'
+            });
+            
+            if (forceExit === 0) {
+              mainWindow.destroy();
+            }
+          }
+        } else if (choice === 1) {
+          // 保存しないで終了
+          mainWindow.destroy();
+        }
+        // choice === 2 (キャンセル) の場合は何もしない（ウィンドウは開いたまま）
+      } else {
+        // 変更がない場合は通常通り終了
+        mainWindow.destroy();
+      }
+    } catch (error) {
+      console.error('終了時のチェックエラー:', error);
+      // エラーが発生した場合は通常通り終了
+      mainWindow.destroy();
+    }
+  }
 }
 
 // 最近のプロジェクトを保存・読み込み
@@ -68,22 +153,6 @@ function addRecentProject(projectPath, projectName) {
   saveRecentProjects();
 }
 
-app.whenReady().then(async () => {
-  await loadRecentProjects();
-  createWindow();
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
 
 ipcMain.handle('save-project', async (event, projectData, currentPath) => {
   try {
@@ -573,3 +642,86 @@ function escapeCSVValue(value) {
   
   return stringValue;
 }
+
+// アプリケーションイベント処理
+app.whenReady().then(async () => {
+  await loadRecentProjects();
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+// macOSでアプリケーション終了前の処理
+app.on('before-quit', async (event) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // レンダラープロセスに変更があるかチェック
+    try {
+      const hasUnsavedChanges = await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          try {
+            return window.projectManager ? window.projectManager.hasChanges() : false;
+          } catch(e) {
+            return false;
+          }
+        })();
+      `);
+      
+      if (hasUnsavedChanges) {
+        event.preventDefault(); // アプリケーション終了を一時停止
+        
+        const choice = dialog.showMessageBoxSync(mainWindow, {
+          type: 'warning',
+          buttons: ['保存して終了', '保存しないで終了', 'キャンセル'],
+          defaultId: 0,
+          title: '未保存の変更',
+          message: '保存されていない変更があります。',
+          detail: 'プロジェクトを保存してからアプリケーションを終了しますか？'
+        });
+        
+        if (choice === 0) {
+          // 保存して終了
+          try {
+            await mainWindow.webContents.executeJavaScript(`
+              (function() {
+                if (window.scenarioManager && window.scenarioManager.saveProject) {
+                  return window.scenarioManager.saveProject();
+                }
+                return Promise.resolve();
+              })();
+            `);
+            // 保存が完了したら終了
+            app.quit();
+          } catch (error) {
+            console.error('保存エラー:', error);
+            // 保存に失敗した場合も終了するかユーザーに確認
+            const forceExit = dialog.showMessageBoxSync(mainWindow, {
+              type: 'error',
+              buttons: ['強制終了', 'キャンセル'],
+              defaultId: 1,
+              title: '保存エラー',
+              message: 'プロジェクトの保存に失敗しました。',
+              detail: 'それでもアプリケーションを終了しますか？'
+            });
+            
+            if (forceExit === 0) {
+              app.quit();
+            }
+          }
+        } else if (choice === 1) {
+          // 保存しないで終了
+          app.quit();
+        }
+        // choice === 2 (キャンセル) の場合は何もしない
+      }
+    } catch (error) {
+      console.error('終了時のチェックエラー:', error);
+      // エラーが発生した場合は通常通り終了
+    }
+  }
+});
