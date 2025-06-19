@@ -192,8 +192,47 @@ main {
   padding: 0.75rem;
   background-color: #2d2d30;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
   border: 1px solid transparent;
+  cursor: grab;
+  position: relative;
+}
+
+.paragraph-item:active {
+  cursor: grabbing;
+}
+
+.paragraph-item.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+  background-color: #37373d;
+  border-color: #007fd4;
+}
+
+.paragraph-item.drag-over-above::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0098ff, #007fd4);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(0, 152, 255, 0.6);
+  z-index: 10;
+}
+
+.paragraph-item.drag-over-below::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0098ff, #007fd4);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(0, 152, 255, 0.6);
+  z-index: 10;
 }
 
 .paragraph-item-content {
@@ -247,6 +286,28 @@ main {
 
 .paragraph-delete-button:hover {
   background-color: #cd3636;
+}
+
+.drag-handle {
+  width: 12px;
+  height: 20px;
+  color: #666666;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.drag-handle:hover {
+  color: #007fd4;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .fixed-button-container {

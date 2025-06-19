@@ -19,8 +19,9 @@ class ScenarioManager {
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager, this.characterManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
     
-    // グローバルに削除ハンドラーを登録
+    // グローバルハンドラーを登録
     window.deleteParagraphHandler = (id) => this.deleteParagraph(id);
+    window.reorderParagraphHandler = (draggedId, targetId, insertAfter) => this.reorderParagraphs(draggedId, targetId, insertAfter);
     
     this.initializeUI();
     this.bindEvents();
@@ -388,6 +389,21 @@ class ScenarioManager {
     } catch (error) {
       console.error('プロジェクトオープンエラー:', error);
       alert(`プロジェクトを開く際にエラーが発生しました:\n\n${error.message}\n\nファイルが破損している可能性があります。`);
+    }
+  }
+
+  reorderParagraphs(draggedId, targetId, insertAfter = false) {
+    console.log('ScenarioManager.reorderParagraphs called:', draggedId, '->', targetId, 'insertAfter:', insertAfter);
+    const result = this.paragraphManager.reorderParagraphs(draggedId, targetId, insertAfter);
+    console.log('Reorder result:', result);
+    
+    if (result) {
+      console.log('Updating UI after successful reorder');
+      this.markAsChanged();
+      this.uiManager.renderParagraphList();
+      this.uiManager.updateParagraphSelection();
+    } else {
+      console.log('Reorder failed');
     }
   }
 

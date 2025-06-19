@@ -143,6 +143,90 @@ block_types:
           - {value: "info", label: "情報"}
           - {value: "warning", label: "警告"}
         default: "info"
+      
+  stage_direction:
+    label: "ト書き"
+    description: "舞台演出指示"
+    requires_text: true
+    parameters:
+      action_type:
+        type: "text"
+        label: "動作タイプ"
+        placeholder: "立つ、座る、歩く等"
+        default: ""
+        required: false
+      location:
+        type: "text"
+        label: "場所"
+        placeholder: "舞台上、下手、上手等"
+        default: ""
+        required: false
+      duration:
+        type: "number"
+        label: "継続時間"
+        placeholder: "秒数"
+        default: 1.0
+        required: false
+        min: 0
+        step: 0.1
+```
+
+#### パラメータタイプの詳細
+
+##### **text型パラメータ**
+```yaml
+parameter_name:
+  type: "text"
+  label: "パラメータ名"
+  placeholder: "入力例やヒント"
+  default: ""           # デフォルト値
+  required: false       # 必須かどうか
+```
+
+##### **number型パラメータ**
+```yaml
+parameter_name:
+  type: "number"
+  label: "数値パラメータ"
+  placeholder: "数値を入力"
+  default: 0
+  required: false
+  min: 0              # 最小値
+  max: 100            # 最大値（オプション）
+  step: 0.1           # ステップ値
+```
+
+##### **select型パラメータ**
+```yaml
+parameter_name:
+  type: "select"
+  label: "選択パラメータ"
+  default: "option1"
+  required: true
+  options:
+    - value: "option1"
+      label: "選択肢1"
+    - value: "option2"
+      label: "選択肢2"
+```
+
+##### **character_select型パラメータ**
+```yaml
+speaker:
+  type: "character_select"
+  label: "話者"
+  placeholder: "キャラクターを選択"
+  default: ""
+  required: false
+```
+
+##### **emotion_select型パラメータ**
+```yaml
+emotion:
+  type: "emotion_select"
+  label: "感情"
+  default: ""
+  required: false
 ```
 
 #### キャラクター定義

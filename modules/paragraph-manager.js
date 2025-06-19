@@ -143,6 +143,36 @@ class ParagraphManager {
   getSelectedParagraphId() {
     return this.selectedParagraphId;
   }
+
+  reorderParagraphs(draggedId, targetId, insertAfter = false) {
+    const draggedIndex = this.paragraphs.findIndex(p => p.id === draggedId);
+    const targetIndex = this.paragraphs.findIndex(p => p.id === targetId);
+    
+    if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
+      return false;
+    }
+    
+    // 配列から要素を取り出し
+    const draggedParagraph = this.paragraphs.splice(draggedIndex, 1)[0];
+    
+    // 挿入位置を計算
+    let insertIndex = targetIndex;
+    
+    // ドラッグ元が対象より前にある場合、インデックスを調整
+    if (draggedIndex < targetIndex) {
+      insertIndex = targetIndex - 1;
+    }
+    
+    // insertAfterが true の場合は後に挿入
+    if (insertAfter) {
+      insertIndex++;
+    }
+    
+    // 挿入位置に要素を挿入
+    this.paragraphs.splice(insertIndex, 0, draggedParagraph);
+    
+    return true;
+  }
 }
 
 export { ParagraphManager };

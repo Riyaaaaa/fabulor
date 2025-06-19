@@ -7,6 +7,7 @@ class UIManager {
     this.characterManager = characterManager;
     this.typeParamContainers = {};
     this.typeParams = {};
+    this.draggedElement = null; // グローバルなドラッグ状態
     
     this.initializeElements();
   }
@@ -191,6 +192,12 @@ class UIManager {
     const item = document.createElement('div');
     item.className = 'paragraph-item';
     item.dataset.id = paragraph.id;
+    item.draggable = true;
+    
+    const dragHandle = document.createElement('div');
+    dragHandle.className = 'drag-handle';
+    dragHandle.innerHTML = '⋮⋮';
+    dragHandle.title = 'ドラッグして並び替え';
     
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'paragraph-item-content';
@@ -211,6 +218,7 @@ class UIManager {
     deleteButton.textContent = '×';
     deleteButton.title = '削除';
     
+    item.appendChild(dragHandle);
     item.appendChild(contentWrapper);
     item.appendChild(deleteButton);
     
@@ -229,7 +237,103 @@ class UIManager {
       }
     });
     
+    // ドラッグ&ドロップイベント
+    this.addDragAndDropListeners(item);
+    
     return item;
+  }
+
+  addDragAndDropListeners(item) {
+    // ドラッグ開始
+    item.addEventListener('dragstart', (e) => {
+      console.log('Drag start:', item.dataset.id);
+      this.draggedElement = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.dataset.id);
+    });
+    
+    // ドラッグ終了
+    item.addEventListener('dragend', (e) => {
+      console.log('Drag end:', item.dataset.id);
+      item.classList.remove('dragging');
+      document.querySelectorAll('.paragraph-item').forEach(el => {
+        el.classList.remove('drag-over-above', 'drag-over-below');
+      });
+      this.draggedElement = null;
+    });
+    
+    // ドラッグオーバー
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      if (this.draggedElement && this.draggedElement !== item) {
+        // 他のアイテムのドラッグオーバー状態をクリア
+        document.querySelectorAll('.paragraph-item').forEach(el => {
+          el.classList.remove('drag-over-above', 'drag-over-below');
+        });
+        
+        // マウス位置に基づいて挿入位置を決定
+        const rect = item.getBoundingClientRect();
+        const mouseY = e.clientY;
+        const itemCenterY = rect.top + rect.height / 2;
+        
+        if (mouseY < itemCenterY) {
+          // マウスが上半分にある場合：要素の上に挿入
+          item.classList.add('drag-over-above');
+        } else {
+          // マウスが下半分にある場合：要素の下に挿入
+          item.classList.add('drag-over-below');
+        }
+      }
+    });
+    
+    // ドロップ
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      console.log('Drop event fired on:', item.dataset.id);
+      console.log('this.draggedElement:', this.draggedElement ? this.draggedElement.dataset.id : 'null');
+      
+      if (this.draggedElement && this.draggedElement !== item) {
+        const draggedId = this.draggedElement.dataset.id;
+        const targetId = item.dataset.id;
+        
+        console.log('Processing drop:', draggedId, '->', targetId);
+        
+        // マウス位置に基づいて挿入位置を決定
+        const rect = item.getBoundingClientRect();
+        const mouseY = e.clientY;
+        const itemCenterY = rect.top + rect.height / 2;
+        
+        let insertAfter = false;
+        if (mouseY >= itemCenterY) {
+          // マウスが下半分にある場合：要素の後に挿入
+          insertAfter = true;
+        }
+        
+        console.log('insertAfter:', insertAfter);
+        console.log('reorderParagraphHandler exists:', !!window.reorderParagraphHandler);
+        
+        if (window.reorderParagraphHandler) {
+          console.log('Calling reorderParagraphHandler');
+          window.reorderParagraphHandler(draggedId, targetId, insertAfter);
+        } else {
+          console.error('reorderParagraphHandler not found!');
+        }
+      } else {
+        console.log('Drop ignored: same element or no dragged element');
+      }
+      
+      item.classList.remove('drag-over-above', 'drag-over-below');
+    });
+    
+    // ドラッグリーブ
+    item.addEventListener('dragleave', (e) => {
+      if (!item.contains(e.relatedTarget)) {
+        item.classList.remove('drag-over-above', 'drag-over-below');
+      }
+    });
   }
 
   updateParagraphListItem(paragraph) {
