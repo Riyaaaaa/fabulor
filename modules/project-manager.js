@@ -141,6 +141,25 @@ class ProjectManager {
     }
   }
 
+  async exportAllScenesAsCSV(projectPath, scenes, blockTypeManager) {
+    try {
+      const result = await window.electronAPI.exportAllScenesAsCSV(projectPath, scenes, blockTypeManager);
+      
+      if (result.success) {
+        alert(`全シーンのCSVエクスポートが完了しました。\n\n出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}`);
+        return { success: true };
+      } else {
+        const errorMessage = result.error || '不明なエラー';
+        alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${errorMessage}`);
+        return { success: false, error: errorMessage };
+      }
+    } catch (error) {
+      console.error('全シーンエクスポートエラー:', error);
+      alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
   generateCSV(paragraphs, blockTypeManager) {
     // 最大のArg数を計算
     let maxArgs = 0;

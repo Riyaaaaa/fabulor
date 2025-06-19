@@ -392,8 +392,22 @@ class ScenarioManager {
   }
 
   async exportCSV() {
-    const paragraphs = this.paragraphManager.getParagraphs();
-    await this.projectManager.exportCSV(paragraphs, this.blockTypeManager);
+    const projectPath = this.projectManager.getProjectPath();
+    if (!projectPath) {
+      alert('プロジェクトが保存されていません。先にプロジェクトを保存してください。');
+      return;
+    }
+    
+    // 現在のシーンを保存してから全シーンをエクスポート
+    await this.saveCurrentScene();
+    
+    const scenes = this.sceneManager.getScenes();
+    if (scenes.length === 0) {
+      alert('エクスポートするシーンがありません。');
+      return;
+    }
+    
+    await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, this.blockTypeManager);
   }
 
   onTypeChange() {

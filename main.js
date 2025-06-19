@@ -392,3 +392,176 @@ ipcMain.handle('open-recent-project', async (event, projectPath) => {
     return { success: false, error: error.message };
   }
 });
+
+// 全シーンをCSVとしてエクスポート
+ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, blockTypeManager) => {
+  try {
+    // プロジェクトファイルと同じ階層にoutputディレクトリを作成
+    const projectDir = path.dirname(projectPath);
+    const outputDir = path.join(projectDir, 'output');
+    
+    // outputディレクトリが存在しない場合は作成
+    try {
+      await fs.access(outputDir);
+    } catch {
+      await fs.mkdir(outputDir, { recursive: true });
+    }
+    
+    let fileCount = 0;
+    
+    // 各シーンをCSVファイルとして保存
+    for (const scene of scenes) {
+      try {
+        // シーンデータを読み込み
+        let sceneParagraphs = [];
+        if (scene.exists) {
+          const sceneResult = await loadSceneData(projectPath, scene.fileName);
+          if (sceneResult.success) {
+            sceneParagraphs = sceneResult.data.paragraphs || [];
+          }
+        } else if (scene.paragraphs) {
+          sceneParagraphs = scene.paragraphs;
+        }
+        
+        if (sceneParagraphs.length === 0) {
+          console.log(`シーン "${scene.name}" は空のためスキップしました`);
+          continue;
+        }
+        
+        // CSVデータを生成
+        const csvData = generateCSVData(sceneParagraphs, blockTypeManager);
+        
+        // ファイル名を作成（シーン名から危険な文字を除去）
+        const safeSceneName = scene.name.replace(/[<>:"/\\|?*]/g, '_');
+        const csvFileName = `${safeSceneName}.csv`;
+        const csvFilePath = path.join(outputDir, csvFileName);
+        
+        // CSVファイルを保存
+        await fs.writeFile(csvFilePath, csvData, 'utf8');
+        fileCount++;
+        
+      } catch (error) {
+        console.error(`シーン "${scene.name}" のエクスポート中にエラー:`, error);
+        // 個別のシーンのエラーは続行して他のシーンを処理
+      }
+    }
+    
+    return { 
+      success: true, 
+      outputDir: outputDir,
+      fileCount: fileCount
+    };
+  } catch (error) {
+    console.error('Export all scenes error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// シーンデータを読み込むヘルパー関数
+async function loadSceneData(projectPath, sceneFileName) {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenePath = path.join(`${projectDir}_scenes`, sceneFileName);
+    
+    const sceneContent = await fs.readFile(scenePath, 'utf8');
+    const sceneData = JSON.parse(sceneContent);
+    
+    return { success: true, data: sceneData };
+  } catch (error) {
+    console.error('Scene load error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// CSVデータを生成するヘルパー関数
+function generateCSVData(paragraphs, blockTypeManager) {
+  // 最大のArg数を計算
+  let maxArgs = 0;
+  paragraphs.forEach(paragraph => {
+    const blockType = blockTypeManager.getBlockType(paragraph.type);
+    let argCount = 0;
+    
+    if (blockType && blockType.parameters) {
+      argCount += Object.keys(blockType.parameters).length;
+    }
+    
+    if (blockType && blockType.requires_text) {
+      argCount += 1;
+    }
+    
+    maxArgs = Math.max(maxArgs, argCount);
+  });
+
+  // ヘッダー行を生成
+  const headers = ['Type', 'Tag'];
+  for (let i = 1; i <= maxArgs; i++) {
+    headers.push(`Arg${i}`);
+  }
+
+  // データ行を生成
+  const rows = [headers];
+  paragraphs.forEach(paragraph => {
+    const row = [];
+    
+    // Type
+    row.push(escapeCSVValue(paragraph.type || ''));
+    
+    // Tag
+    const tags = Array.isArray(paragraph.tags) ? paragraph.tags.join(',') : '';
+    row.push(escapeCSVValue(tags));
+    
+    // Args
+    const blockType = blockTypeManager.getBlockType(paragraph.type);
+    let argIndex = 0;
+    
+    // パラメータを追加
+    if (blockType && blockType.parameters) {
+      const paramKeys = Object.keys(blockType.parameters);
+      paramKeys.forEach(paramKey => {
+        const value = paragraph[paramKey] || '';
+        row.push(escapeCSVValue(value));
+        argIndex++;
+      });
+    }
+    
+    // テキストを追加（requires_textがtrueの場合）
+    if (blockType && blockType.requires_text) {
+      row.push(escapeCSVValue(paragraph.text || ''));
+      argIndex++;
+    }
+    
+    // 残りの列を空文字で埋める
+    while (argIndex < maxArgs) {
+      row.push('');
+      argIndex++;
+    }
+    
+    rows.push(row);
+  });
+
+  // CSV文字列に変換
+  return rows.map(row => row.join(',')).join('\n');
+}
+
+// CSV値をエスケープするヘルパー関数
+function escapeCSVValue(value) {
+  if (value == null) {
+    return '';
+  }
+  
+  let stringValue = String(value);
+  
+  // 改行文字をエスケープ
+  stringValue = stringValue.replace(/\r\n/g, '\\r\\n');
+  stringValue = stringValue.replace(/\n/g, '\\n');
+  stringValue = stringValue.replace(/\r/g, '\\r');
+  
+  // カンマまたはダブルクォートが含まれている場合はダブルクォートで囲む
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    // 内部のダブルクォートをエスケープ
+    stringValue = stringValue.replace(/"/g, '""');
+    stringValue = `"${stringValue}"`;
+  }
+  
+  return stringValue;
+}
