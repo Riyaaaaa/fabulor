@@ -53,7 +53,9 @@ class PreviewManager {
       
       // 改行を<br>タグに変換してHTMLとして設定（HTMLエスケープも行う）
       const escapedText = this.escapeHtml(paragraph.text);
-      const textWithBreaks = escapedText.replace(/\n/g, '<br>');
+      // 末尾の改行や空行を除去してから<br>タグに変換
+      const trimmedText = escapedText.replace(/[\n\r\s]*$/, '');
+      const textWithBreaks = trimmedText.replace(/\n/g, '<br>');
       paragraphDiv.innerHTML = textWithBreaks;
       previewContent.appendChild(paragraphDiv);
     });
@@ -82,7 +84,9 @@ class PreviewManager {
       textDiv.className = 'text';
       // 改行を<br>タグに変換してHTMLとして設定（HTMLエスケープも行う）
       const escapedText = this.escapeHtml(paragraph.text);
-      const textWithBreaks = escapedText.replace(/\n/g, '<br>');
+      // 末尾の改行や空行を除去してから<br>タグに変換
+      const trimmedText = escapedText.replace(/[\n\r\s]*$/, '');
+      const textWithBreaks = trimmedText.replace(/\n/g, '<br>');
       textDiv.innerHTML = textWithBreaks;
       paragraphDiv.appendChild(textDiv);
       

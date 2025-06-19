@@ -556,6 +556,9 @@ function escapeCSVValue(value) {
   
   let stringValue = String(value);
   
+  // 末尾の改行や空行を除去
+  stringValue = stringValue.replace(/[\n\r\s]*$/, '');
+  
   // 改行文字をエスケープ
   stringValue = stringValue.replace(/\r\n/g, '\\r\\n');
   stringValue = stringValue.replace(/\n/g, '\\n');

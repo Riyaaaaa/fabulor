@@ -234,6 +234,9 @@ class ProjectManager {
     
     value = value.toString();
     
+    // 末尾の改行や空行を除去
+    value = value.replace(/[\n\r\s]*$/, '');
+    
     // 改行を改行コード文字列に変換
     value = value.replace(/\r\n/g, '\\r\\n')
                  .replace(/\n/g, '\\n')

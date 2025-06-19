@@ -54,36 +54,59 @@ class TextImporter {
     const lines = text.split('\n');
     const blocks = [];
     let currentBlock = '';
+    let inDialogue = false;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
       // 空行の場合
       if (line === '') {
-        if (currentBlock.trim()) {
+        if (!inDialogue && currentBlock.trim()) {
           blocks.push(currentBlock.trim());
           currentBlock = '';
+        } else if (inDialogue) {
+          // セリフ中の空行は改行として保持
+          currentBlock += '\n';
         }
         continue;
       }
       
-      // セリフの可能性がある行（「」で囲まれている）
-      if (this.isDialogueLine(line)) {
-        // 現在のブロックがあれば保存
+      // セリフ開始の判定（文頭が「で始まる、または話者名：「形式）
+      const startsDialogue = this.startsDialogue(line);
+      const endsDialogue = this.endsDialogue(line);
+      
+      if (startsDialogue && !inDialogue) {
+        // セリフ開始
         if (currentBlock.trim()) {
           blocks.push(currentBlock.trim());
           currentBlock = '';
         }
-        // セリフは独立したブロックとして扱う
-        blocks.push(line);
-        continue;
-      }
-      
-      // 通常のテキスト行
-      if (currentBlock) {
-        currentBlock += '\n' + line;
-      } else {
+        inDialogue = true;
         currentBlock = line;
+        
+        // 同じ行でセリフが終了する場合
+        if (endsDialogue) {
+          blocks.push(currentBlock.trim());
+          currentBlock = '';
+          inDialogue = false;
+        }
+      } else if (inDialogue) {
+        // セリフ継続中
+        currentBlock += '\n' + line;
+        
+        // セリフ終了の判定
+        if (endsDialogue) {
+          blocks.push(currentBlock.trim());
+          currentBlock = '';
+          inDialogue = false;
+        }
+      } else {
+        // 通常のテキスト行
+        if (currentBlock) {
+          currentBlock += '\n' + line;
+        } else {
+          currentBlock = line;
+        }
       }
     }
     
@@ -95,23 +118,48 @@ class TextImporter {
     return blocks;
   }
 
-  // セリフ行かどうかを判定（文頭の鍵カッコのみセリフとして扱う）
-  isDialogueLine(line) {
-    // 行の先頭（空白等を除く）が「で始まっているかチェック
+  // セリフ開始の判定
+  startsDialogue(line) {
     const trimmedLine = line.trim();
     
-    // 空行は対象外
     if (!trimmedLine) {
       return false;
     }
     
-    // 文頭が「で始まる場合のみセリフとして判定
+    // 文頭が「で始まる場合
     if (trimmedLine.startsWith('「')) {
-      // 対応する」があることも確認
-      return trimmedLine.includes('」');
+      return true;
     }
-
+    
+    // キャラクター名：「セリフ」形式
+    const speakerPattern = /^[^「]+?：\s*「/;
+    if (speakerPattern.test(trimmedLine)) {
+      return true;
+    }
+    
+    // キャラクター名「セリフ」形式（話者名が妥当な場合）
+    const directSpeechPattern = /^([^「]{1,10})「/;
+    const match = trimmedLine.match(directSpeechPattern);
+    if (match) {
+      const potentialSpeaker = match[1].trim();
+      if (potentialSpeaker.length >= 1 && !/^[のはがをにで]$/.test(potentialSpeaker)) {
+        return true;
+      }
+    }
+    
     return false;
+  }
+
+  // セリフ終了の判定
+  endsDialogue(line) {
+    const trimmedLine = line.trim();
+    return trimmedLine.includes('」');
+  }
+
+  // セリフ行かどうかを判定（文頭の鍵カッコのみセリフとして扱う）
+  isDialogueLine(line) {
+    // この関数は後方互換性のために残すが、新しいロジックではstartsDialogueを使用
+    return this.startsDialogue(line) && this.endsDialogue(line);
   }
 
   // キャラクター名を抽出（セリフの前にある名前を想定）
