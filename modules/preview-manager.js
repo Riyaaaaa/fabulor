@@ -46,7 +46,8 @@ class PreviewManager {
       const paragraphDiv = document.createElement('div');
       paragraphDiv.className = 'paragraph';
       
-      if (paragraph.speaker && paragraph.speaker.trim()) {
+      // セリフタイプのブロックは話者の有無に関わらず鍵カッコを表示
+      if (paragraph.type === 'dialogue') {
         paragraphDiv.classList.add('dialogue');
       }
       
@@ -69,7 +70,8 @@ class PreviewManager {
       const paragraphDiv = document.createElement('div');
       paragraphDiv.className = 'paragraph';
       
-      if (paragraph.speaker && paragraph.speaker.trim()) {
+      // セリフタイプの場合は話者名を表示（設定されている場合のみ）
+      if (paragraph.type === 'dialogue' && paragraph.speaker && paragraph.speaker.trim()) {
         const speakerDiv = document.createElement('div');
         speakerDiv.className = 'speaker';
         speakerDiv.textContent = paragraph.speaker;

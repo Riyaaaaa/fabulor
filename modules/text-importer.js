@@ -95,11 +95,23 @@ class TextImporter {
     return blocks;
   }
 
-  // セリフ行かどうかを判定
+  // セリフ行かどうかを判定（文頭の鍵カッコのみセリフとして扱う）
   isDialogueLine(line) {
-    // 「」で囲まれているかチェック
-    const dialoguePattern = /^.*「.*」.*$/;
-    return dialoguePattern.test(line);
+    // 行の先頭（空白等を除く）が「で始まっているかチェック
+    const trimmedLine = line.trim();
+    
+    // 空行は対象外
+    if (!trimmedLine) {
+      return false;
+    }
+    
+    // 文頭が「で始まる場合のみセリフとして判定
+    if (trimmedLine.startsWith('「')) {
+      // 対応する」があることも確認
+      return trimmedLine.includes('」');
+    }
+
+    return false;
   }
 
   // キャラクター名を抽出（セリフの前にある名前を想定）
