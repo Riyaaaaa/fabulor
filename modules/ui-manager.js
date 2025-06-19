@@ -307,11 +307,34 @@ class UIManager {
       item.appendChild(title);
       item.appendChild(info);
       
-      item.addEventListener('click', () => sceneClickHandler(scene.id));
+      // クリックイベントの遅延処理でダブルクリックとの競合を防ぐ
+      let clickTimer = null;
+      
+      item.addEventListener('click', (e) => {
+        if (e.target === title || title.contains(e.target)) {
+          // タイトル部分のクリックは遅延処理
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
+          clickTimer = setTimeout(() => {
+            sceneClickHandler(scene.id);
+            clickTimer = null;
+          }, 300);
+        } else {
+          // タイトル以外の部分は即座に処理
+          sceneClickHandler(scene.id);
+        }
+      });
       
       // ダブルクリックで編集モードに入る
       title.addEventListener('dblclick', (e) => {
         e.stopPropagation();
+        // クリックタイマーをクリア
+        if (clickTimer) {
+          clearTimeout(clickTimer);
+          clickTimer = null;
+        }
         this.makeSceneNameEditable(title, scene, sceneRenameHandler);
       });
       
@@ -363,8 +386,10 @@ class UIManager {
       }
     });
     
-    // フォーカスが外れたら保存
-    input.addEventListener('blur', saveChanges);
+    // フォーカスが外れたら保存（ただし、少し遅延させて意図しないblurを防ぐ）
+    input.addEventListener('blur', () => {
+      setTimeout(saveChanges, 100);
+    });
   }
 
   updateCurrentSceneName(sceneName) {
