@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const yaml = require('js-yaml');
 
 let mainWindow;
+let recentProjects = [];
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -19,7 +20,58 @@ function createWindow() {
   mainWindow.loadFile('index.html');
 }
 
-app.whenReady().then(createWindow);
+// 最近のプロジェクトを保存・読み込み
+async function loadRecentProjects() {
+  try {
+    const userDataPath = app.getPath('userData');
+    const recentPath = path.join(userDataPath, 'recent-projects.json');
+    const data = await fs.readFile(recentPath, 'utf8');
+    recentProjects = JSON.parse(data);
+    // 存在しないファイルを除外
+    const validProjects = [];
+    for (const project of recentProjects) {
+      try {
+        await fs.access(project.path);
+        validProjects.push(project);
+      } catch {
+        // ファイルが存在しない場合は除外
+      }
+    }
+    recentProjects = validProjects.slice(0, 10); // 最大10件
+  } catch {
+    recentProjects = [];
+  }
+}
+
+async function saveRecentProjects() {
+  try {
+    const userDataPath = app.getPath('userData');
+    const recentPath = path.join(userDataPath, 'recent-projects.json');
+    await fs.writeFile(recentPath, JSON.stringify(recentProjects, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Failed to save recent projects:', error);
+  }
+}
+
+function addRecentProject(projectPath, projectName) {
+  // 既存のエントリを削除
+  recentProjects = recentProjects.filter(p => p.path !== projectPath);
+  // 先頭に追加
+  recentProjects.unshift({
+    path: projectPath,
+    name: projectName,
+    lastOpened: new Date().toISOString()
+  });
+  // 最大10件に制限
+  recentProjects = recentProjects.slice(0, 10);
+  // 保存
+  saveRecentProjects();
+}
+
+app.whenReady().then(async () => {
+  await loadRecentProjects();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -58,6 +110,9 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
     
     // プロジェクト名に基づいてスキーマファイルを作成
     const projectName = path.basename(filePath, '.fbl');
+    
+    // 最近のプロジェクトに追加
+    addRecentProject(filePath, projectName);
     const projectDir = path.dirname(filePath);
     const schemaFileName = `${projectName}_schema.yaml`;
     const schemaPath = path.join(projectDir, schemaFileName);
@@ -130,6 +185,10 @@ ipcMain.handle('open-project', async (event) => {
     const filePath = result.filePaths[0];
     const fileContent = await fs.readFile(filePath, 'utf8');
     const projectData = JSON.parse(fileContent);
+    
+    // 最近のプロジェクトに追加
+    const projectName = path.basename(filePath, '.fbl');
+    addRecentProject(filePath, projectName);
     
     return { success: true, data: projectData, path: filePath };
   } catch (error) {
@@ -308,6 +367,28 @@ ipcMain.handle('import-text-file', async (event) => {
     };
   } catch (error) {
     console.error('Import text file error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// 最近のプロジェクト一覧を取得
+ipcMain.handle('get-recent-projects', async () => {
+  return recentProjects;
+});
+
+// 最近のプロジェクトを開く
+ipcMain.handle('open-recent-project', async (event, projectPath) => {
+  try {
+    const fileContent = await fs.readFile(projectPath, 'utf8');
+    const projectData = JSON.parse(fileContent);
+    
+    // 最近のプロジェクトに追加（最終アクセス日時を更新）
+    const projectName = path.basename(projectPath, '.fbl');
+    addRecentProject(projectPath, projectName);
+    
+    return { success: true, data: projectData, path: projectPath };
+  } catch (error) {
+    console.error('Open recent project error:', error);
     return { success: false, error: error.message };
   }
 });

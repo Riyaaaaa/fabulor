@@ -10,7 +10,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadScene: (projectPath, sceneFileName) => ipcRenderer.invoke('load-scene', projectPath, sceneFileName),
   checkSceneExists: (projectPath, sceneFileName) => ipcRenderer.invoke('check-scene-exists', projectPath, sceneFileName),
   saveNewScene: (projectPath) => ipcRenderer.invoke('save-new-scene', projectPath),
-  importTextFile: () => ipcRenderer.invoke('import-text-file')
+  importTextFile: () => ipcRenderer.invoke('import-text-file'),
+  getRecentProjects: () => ipcRenderer.invoke('get-recent-projects'),
+  openRecentProject: (projectPath) => ipcRenderer.invoke('open-recent-project', projectPath)
 });
 
 window.addEventListener('DOMContentLoaded', () => {

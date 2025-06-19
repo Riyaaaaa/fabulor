@@ -27,11 +27,12 @@ class ScenarioManager {
     this.updateTitle();
   }
 
-  initializeUI() {
+  async initializeUI() {
     this.uiManager.generateTypeUI();
     // 初期状態では編集機能を無効化
     this.setEditingEnabled(false);
-    this.uiManager.showPlaceholder();
+    // 最近のプロジェクト一覧を表示
+    await this.showRecentProjects();
   }
 
   bindEvents() {
@@ -45,6 +46,8 @@ class ScenarioManager {
     document.getElementById('reload-schema').addEventListener('click', () => this.reloadSchema());
     document.getElementById('add-scene').addEventListener('click', () => this.addScene());
     document.getElementById('import-text').addEventListener('click', () => this.importTextAsScene());
+    document.getElementById('new-project-from-recent').addEventListener('click', () => this.newProject());
+    document.getElementById('open-project-from-recent').addEventListener('click', () => this.openProject());
     
     const editorContent = this.uiManager.getEditorContent();
     const tagsInput = this.uiManager.getTagsInput();
@@ -107,6 +110,172 @@ class ScenarioManager {
     }
   }
 
+  async showRecentProjects() {
+    try {
+      const recentProjects = await window.electronAPI.getRecentProjects();
+      const recentProjectsList = document.getElementById('recent-projects-list');
+      const recentProjectsPanel = document.getElementById('recent-projects-panel');
+      
+      recentProjectsList.innerHTML = '';
+      
+      if (recentProjects.length === 0) {
+        recentProjectsList.innerHTML = '<div class="recent-projects-empty">最近開いたプロジェクトはありません</div>';
+      } else {
+        recentProjects.forEach(project => {
+          const item = document.createElement('div');
+          item.className = 'recent-project-item';
+          
+          const info = document.createElement('div');
+          info.className = 'recent-project-info';
+          
+          const name = document.createElement('div');
+          name.className = 'recent-project-name';
+          name.textContent = project.name;
+          
+          const path = document.createElement('div');
+          path.className = 'recent-project-path';
+          path.textContent = project.path;
+          
+          const date = document.createElement('div');
+          date.className = 'recent-project-date';
+          const lastOpened = new Date(project.lastOpened);
+          date.textContent = `最終更新: ${lastOpened.toLocaleDateString()} ${lastOpened.toLocaleTimeString()}`;
+          
+          info.appendChild(name);
+          info.appendChild(path);
+          info.appendChild(date);
+          item.appendChild(info);
+          
+          item.addEventListener('click', () => this.openRecentProject(project.path));
+          
+          recentProjectsList.appendChild(item);
+        });
+      }
+      
+      recentProjectsPanel.style.display = 'block';
+    } catch (error) {
+      console.error('Failed to load recent projects:', error);
+    }
+  }
+
+  hideRecentProjects() {
+    const recentProjectsPanel = document.getElementById('recent-projects-panel');
+    recentProjectsPanel.style.display = 'none';
+  }
+
+  async loadProject(projectData, projectPath) {
+    try {
+      this.projectManager.setProjectPath(projectPath);
+      this.sceneManager.setProjectPath(projectPath);
+      
+      // スキーマファイルをロード
+      try {
+        await this.blockTypeManager.loadSchemaFile(projectPath, projectData.schemaFile);
+      } catch (error) {
+        console.error('スキーマファイル読み込みエラー:', error);
+        alert(`スキーマファイルの読み込みに失敗しました:\n${error.message}\n\nプロジェクトは開かれましたが、スキーマファイルが正しく読み込まれませんでした。`);
+      }
+
+      // キャラクターファイルをロード（プロジェクト名ベース）
+      try {
+        const projectName = projectPath.split('/').pop().replace('.fbl', '');
+        const charactersFileName = `${projectName}_characters.yaml`;
+        await this.characterManager.loadCharactersFile(projectPath, charactersFileName);
+      } catch (error) {
+        console.error('キャラクターファイル読み込みエラー:', error);
+        console.warn('キャラクターファイルの読み込みに失敗しました:', error.message);
+      }
+      
+      // シーンリストをロード
+      try {
+        this.sceneManager.loadScenesFromProject(projectData.scenes || []);
+      } catch (error) {
+        console.error('シーンリスト読み込みエラー:', error);
+        alert(`シーンリストの読み込みに失敗しました:\n${error.message}`);
+        return;
+      }
+
+      // 各シーンの存在チェック
+      const scenes = this.sceneManager.getScenes();
+      for (const scene of scenes) {
+        try {
+          const existsResult = await window.electronAPI.checkSceneExists(projectPath, scene.fileName);
+          this.sceneManager.markSceneAsExisting(scene.id, existsResult.exists);
+        } catch (error) {
+          console.warn('シーンファイル存在チェックエラー:', scene.fileName, error);
+          this.sceneManager.markSceneAsExisting(scene.id, false);
+        }
+      }
+
+      // レガシーデータの処理（v1.0.0からのマイグレーション）
+      try {
+        if (projectData.paragraphs && projectData.paragraphs.length > 0) {
+          const defaultScene = this.sceneManager.getCurrentScene();
+          if (defaultScene) {
+            defaultScene.paragraphs = projectData.paragraphs;
+            await window.electronAPI.saveScene(projectPath, defaultScene.id, {
+              id: defaultScene.id,
+              name: defaultScene.name,
+              fileName: defaultScene.fileName,
+              paragraphs: defaultScene.paragraphs
+            });
+          }
+        }
+      } catch (error) {
+        console.error('レガシーデータ処理エラー:', error);
+        console.warn('レガシーデータの処理に失敗しました:', error.message);
+      }
+      
+      // 現在のシーンを選択
+      try {
+        const currentSceneId = projectData.currentSceneId || (this.sceneManager.getScenes().length > 0 ? this.sceneManager.getScenes()[0].id : null);
+        if (currentSceneId) {
+          await this.selectScene(currentSceneId);
+        } else {
+          this.paragraphManager.setParagraphs([]);
+          this.uiManager.showPlaceholder();
+        }
+      } catch (error) {
+        console.warn('シーン選択エラー:', error);
+        this.paragraphManager.setParagraphs([]);
+        this.uiManager.showPlaceholder();
+      }
+      
+      // 編集機能を有効化
+      this.setEditingEnabled(true);
+      
+      // UIを再生成
+      try {
+        this.uiManager.generateTypeUI();
+        this.bindSchemaEvents();
+        this.uiManager.renderSceneList(this.sceneManager.getScenes(), this.sceneManager.getCurrentSceneId(), (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName));
+      } catch (error) {
+        console.error('UI再生成エラー:', error);
+        alert(`UIの更新に失敗しました:\n${error.message}`);
+      }
+      
+      this.hideRecentProjects();
+      this.updateTitle();
+    } catch (error) {
+      console.error('プロジェクト読み込みエラー:', error);
+      alert(`プロジェクトの読み込みに失敗しました:\n${error.message}`);
+    }
+  }
+
+  async openRecentProject(projectPath) {
+    try {
+      const result = await window.electronAPI.openRecentProject(projectPath);
+      if (result.success) {
+        await this.loadProject(result.data, result.path);
+      } else {
+        alert('プロジェクトを開けませんでした:\n' + (result.error || '不明なエラー'));
+      }
+    } catch (error) {
+      console.error('Open recent project error:', error);
+      alert('プロジェクトを開けませんでした:\n' + error.message);
+    }
+  }
+
   async newProject() {
     const hasChanges = this.projectManager.hasChanges();
     if (hasChanges || this.paragraphManager.getParagraphs().length > 0) {
@@ -153,6 +322,7 @@ class ScenarioManager {
     this.setEditingEnabled(true);
     this.setSceneEditingEnabled(false);
     
+    this.hideRecentProjects();
     this.uiManager.renderSceneList([], null, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName));
     this.uiManager.updateCurrentSceneName('');
     this.uiManager.renderParagraphList();
@@ -202,57 +372,22 @@ class ScenarioManager {
   }
 
   async openProject() {
-    const result = await this.projectManager.openProject();
-    
-    if (result.success) {
-      this.sceneManager.setProjectPath(result.path);
+    try {
+      const result = await this.projectManager.openProject();
       
-      // スキーマファイルをロード
-      await this.blockTypeManager.loadSchemaFile(result.path, result.schemaFile);
-
-      // キャラクターファイルをロード（プロジェクト名ベース）
-      const projectName = result.path.split('/').pop().replace('.fbl', '');
-      const charactersFileName = `${projectName}_characters.yaml`;
-      await this.characterManager.loadCharactersFile(result.path, charactersFileName);
-      
-      // シーンリストをロード
-      this.sceneManager.loadScenesFromProject(result.data.scenes || []);
-      
-      // 各シーンの存在確認
-      const scenes = this.sceneManager.getScenes();
-      for (const scene of scenes) {
-        const checkResult = await window.electronAPI.checkSceneExists(result.path, scene.fileName);
-        this.sceneManager.markSceneAsExisting(scene.id, checkResult.exists);
-      }
-      
-      // レガシーデータの処理（v1.0.0からの移行）
-      if (result.legacyParagraphs && result.legacyParagraphs.length > 0) {
-        const defaultScene = this.sceneManager.getCurrentScene();
-        if (defaultScene) {
-          defaultScene.paragraphs = result.legacyParagraphs;
-          await window.electronAPI.saveScene(result.path, defaultScene.id, {
-            id: defaultScene.id,
-            name: defaultScene.name,
-            fileName: defaultScene.fileName,
-            paragraphs: defaultScene.paragraphs
-          });
+      if (result.success) {
+        await this.loadProject(result.data, result.path);
+      } else {
+        // プロジェクトファイルの選択がキャンセルされた場合は何もしない
+        if (result.cancelled) {
+          return;
         }
+        // その他のエラーの場合は詳細なエラーメッセージを表示
+        alert('プロジェクトを開けませんでした:\n' + (result.error || '不明なエラーが発生しました'));
       }
-      
-      // 現在のシーンを選択
-      const currentSceneId = result.data.currentSceneId || (scenes.length > 0 ? scenes[0].id : null);
-      if (currentSceneId) {
-        await this.selectScene(currentSceneId);
-      }
-      
-      // 編集機能を有効化
-      this.setEditingEnabled(true);
-      
-      // UIを再生成
-      this.uiManager.generateTypeUI();
-      this.bindSchemaEvents();
-      this.uiManager.renderSceneList(this.sceneManager.getScenes(), currentSceneId, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName));
-      this.updateTitle();
+    } catch (error) {
+      console.error('プロジェクトオープンエラー:', error);
+      alert(`プロジェクトを開く際にエラーが発生しました:\n\n${error.message}\n\nファイルが破損している可能性があります。`);
     }
   }
 
