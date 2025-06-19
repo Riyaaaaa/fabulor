@@ -111,7 +111,7 @@ class ProjectManager {
           schemaFile: this.currentSchemaFile
         };
       }
-      return { success: false };
+      return { success: false, cancelled: result.cancelled };
     } catch (error) {
       console.error('読み込みエラー:', error);
       alert(`読み込みに失敗しました\n\nエラー内容: ${error.message}`);
@@ -130,6 +130,10 @@ class ProjectManager {
         alert('CSVファイルをエクスポートしました');
         return { success: true };
       } else {
+        // キャンセルの場合は何もしない
+        if (result.cancelled) {
+          return { success: false, cancelled: true };
+        }
         const errorMessage = result.error || '不明なエラー';
         alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${errorMessage}`);
         return { success: false, error: errorMessage };
@@ -149,6 +153,10 @@ class ProjectManager {
         alert(`全シーンのCSVエクスポートが完了しました。\n\n出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}`);
         return { success: true };
       } else {
+        // キャンセルの場合は何もしない（全シーンエクスポートはファイルダイアログを使わないため通常は発生しない）
+        if (result.cancelled) {
+          return { success: false, cancelled: true };
+        }
         const errorMessage = result.error || '不明なエラー';
         alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${errorMessage}`);
         return { success: false, error: errorMessage };

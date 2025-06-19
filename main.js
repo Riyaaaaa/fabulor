@@ -33,21 +33,12 @@ function createWindow() {
       const hasUnsavedChanges = await mainWindow.webContents.executeJavaScript(`
         (function() {
           try {
-            console.log('Checking hasChanges. projectManager exists:', !!window.projectManager);
-            const result = window.projectManager ? window.projectManager.hasChanges() : false;
-            console.log('hasChanges result:', result);
-            return result;
+            return window.projectManager ? window.projectManager.hasChanges() : false;
           } catch(e) {
-            console.error('Error checking changes:', e);
             return false;
           }
         })();
       `);
-      
-      console.log('Main process received hasUnsavedChanges:', hasUnsavedChanges);
-      
-      // テスト用: 強制的にダイアログを表示する場合（デバッグ時のみ使用）
-      // const hasUnsavedChanges = true;
       
       if (hasUnsavedChanges) {
         const choice = dialog.showMessageBoxSync(mainWindow, {
@@ -169,7 +160,7 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
       });
       
       if (result.canceled) {
-        return { success: false };
+        return { success: false, cancelled: true };
       }
       
       filePath = result.filePath;
@@ -248,7 +239,7 @@ ipcMain.handle('open-project', async (event) => {
     });
     
     if (result.canceled || result.filePaths.length === 0) {
-      return { success: false };
+      return { success: false, cancelled: true };
     }
     
     const filePath = result.filePaths[0];
@@ -278,7 +269,7 @@ ipcMain.handle('export-csv', async (event, csvData) => {
     });
     
     if (result.canceled) {
-      return { success: false };
+      return { success: false, cancelled: true };
     }
     
     await fs.writeFile(result.filePath, csvData, 'utf8');
