@@ -649,6 +649,21 @@ main {
   color: #ffb3ba;
 }
 
+.preview-content.novel-format .paragraph.monologue {
+  color: #b3d9ff;
+  font-style: italic;
+}
+
+.preview-content.novel-format .paragraph.monologue::before {
+  content: "（";
+  color: #87ceeb;
+}
+
+.preview-content.novel-format .paragraph.monologue::after {
+  content: "）";
+  color: #87ceeb;
+}
+
 /* 台本形式のスタイル */
 .preview-content.script-format .paragraph {
   margin-bottom: 1rem;
@@ -667,4 +682,14 @@ main {
 .preview-content.script-format .text {
   margin-left: 1rem;
   color: #e0e0e0;
+}
+
+.preview-content.script-format .monologue-speaker {
+  color: #87ceeb;
+  font-style: italic;
+}
+
+.preview-content.script-format .paragraph:has(.monologue-speaker) .text {
+  color: #b3d9ff;
+  font-style: italic;
 }

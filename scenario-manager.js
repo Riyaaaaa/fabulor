@@ -601,6 +601,10 @@ class ScenarioManager {
           // 末尾の改行や空行を除去
           const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
           textContent += `「${trimmedText}」\n\n`;
+        } else if (paragraph.type === 'monologue') {
+          // モノローグは（）で囲む
+          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          textContent += `（${trimmedText}）\n\n`;
         } else {
           // 地の文など
           // 末尾の改行や空行を除去
@@ -615,6 +619,8 @@ class ScenarioManager {
         // セリフタイプの場合は話者名を表示（設定されている場合のみ）
         if (paragraph.type === 'dialogue' && paragraph.speaker && paragraph.speaker.trim()) {
           textContent += `${paragraph.speaker}：\n`;
+        } else if (paragraph.type === 'monologue' && paragraph.speaker && paragraph.speaker.trim()) {
+          textContent += `${paragraph.speaker}（心の声）：\n`;
         }
         
         // 末尾の改行や空行を除去
@@ -622,6 +628,8 @@ class ScenarioManager {
         
         // セリフの場合は台本形式では鍵カッコなし、地の文の場合はそのまま
         if (paragraph.type === 'dialogue') {
+          textContent += `${trimmedText}\n\n`;
+        } else if (paragraph.type === 'monologue') {
           textContent += `${trimmedText}\n\n`;
         } else {
           textContent += `${trimmedText}\n\n`;

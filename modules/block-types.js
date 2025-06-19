@@ -23,6 +23,26 @@ class BlockTypeManager {
           }
         }
       },
+      monologue: {
+        label: 'モノローグ',
+        description: 'キャラクターの心の中の思考',
+        requires_text: true,
+        parameters: {
+          speaker: {
+            type: 'character_select',
+            label: '話者',
+            placeholder: 'キャラクター名',
+            default: '',
+            required: false
+          },
+          emotion: {
+            type: 'emotion_select',
+            label: '感情',
+            default: '',
+            required: false
+          }
+        }
+      },
       narrative: {
         label: '地の文',
         description: '小説の地の文・説明文',
@@ -49,7 +69,7 @@ class BlockTypeManager {
         // 標準定義のタイプを除外してカスタムタイプのみ取得
         const customTypes = {};
         Object.entries(loadedTypes).forEach(([key, value]) => {
-          if (key !== 'dialogue' && key !== 'narrative') {
+          if (key !== 'dialogue' && key !== 'monologue' && key !== 'narrative') {
             customTypes[key] = value;
           }
         });
