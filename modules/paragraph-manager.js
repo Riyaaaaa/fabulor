@@ -37,6 +37,17 @@ class ParagraphManager {
 
   addParagraph() {
     const newParagraph = this.createParagraph();
+    
+    // 選択中のブロックがある場合は、その次に挿入
+    if (this.selectedParagraphId) {
+      const selectedIndex = this.paragraphs.findIndex(p => p.id === this.selectedParagraphId);
+      if (selectedIndex !== -1) {
+        this.paragraphs.splice(selectedIndex + 1, 0, newParagraph);
+        return newParagraph;
+      }
+    }
+    
+    // 選択がない場合は最後に追加
     this.paragraphs.push(newParagraph);
     return newParagraph;
   }

@@ -19,6 +19,9 @@ class ScenarioManager {
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager, this.characterManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
     
+    // グローバルに削除ハンドラーを登録
+    window.deleteParagraphHandler = (id) => this.deleteParagraph(id);
+    
     this.initializeUI();
     this.bindEvents();
     this.updateTitle();
@@ -89,14 +92,18 @@ class ScenarioManager {
     }
   }
 
-  deleteParagraph() {
-    const selectedId = this.paragraphManager.getSelectedParagraphId();
-    if (!selectedId) return;
+  deleteParagraph(paragraphId = null) {
+    const idToDelete = paragraphId || this.paragraphManager.getSelectedParagraphId();
+    if (!idToDelete) return;
     
-    if (this.paragraphManager.deleteParagraph(selectedId)) {
+    if (this.paragraphManager.deleteParagraph(idToDelete)) {
       this.markAsChanged();
       this.uiManager.renderParagraphList();
-      this.uiManager.showPlaceholder();
+      
+      // 削除したブロックが選択中だった場合のみプレースホルダーを表示
+      if (idToDelete === this.paragraphManager.getSelectedParagraphId()) {
+        this.uiManager.showPlaceholder();
+      }
     }
   }
 
@@ -146,7 +153,7 @@ class ScenarioManager {
     this.setEditingEnabled(true);
     this.setSceneEditingEnabled(false);
     
-    this.uiManager.renderSceneList([], null, (sceneId) => this.selectScene(sceneId));
+    this.uiManager.renderSceneList([], null, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName));
     this.uiManager.updateCurrentSceneName('');
     this.uiManager.renderParagraphList();
     this.uiManager.showPlaceholder();
@@ -244,7 +251,7 @@ class ScenarioManager {
       // UIを再生成
       this.uiManager.generateTypeUI();
       this.bindSchemaEvents();
-      this.uiManager.renderSceneList(this.sceneManager.getScenes(), currentSceneId, (sceneId) => this.selectScene(sceneId));
+      this.uiManager.renderSceneList(this.sceneManager.getScenes(), currentSceneId, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName));
       this.updateTitle();
     }
   }
@@ -436,7 +443,7 @@ class ScenarioManager {
     // シーン編集機能を有効化
     this.setSceneEditingEnabled(true);
     
-    this.uiManager.renderSceneList(this.sceneManager.getScenes(), sceneId, (sceneId) => this.selectScene(sceneId));
+    this.uiManager.renderSceneList(this.sceneManager.getScenes(), sceneId, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName));
     this.uiManager.updateCurrentSceneName(scene.name);
     this.uiManager.renderParagraphList();
     
@@ -449,6 +456,21 @@ class ScenarioManager {
       }
     } else {
       this.uiManager.showPlaceholder();
+    }
+  }
+
+  async renameScene(sceneId, newName) {
+    if (this.sceneManager.renameScene(sceneId, newName)) {
+      this.markAsChanged();
+      
+      // 現在のシーンの場合は表示を更新
+      if (sceneId === this.sceneManager.getCurrentSceneId()) {
+        this.uiManager.updateCurrentSceneName(newName);
+      }
+      
+      // シーンリストを再描画
+      const currentSceneId = this.sceneManager.getCurrentSceneId();
+      this.uiManager.renderSceneList(this.sceneManager.getScenes(), currentSceneId, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName));
     }
   }
 

@@ -192,6 +192,9 @@ class UIManager {
     item.className = 'paragraph-item';
     item.dataset.id = paragraph.id;
     
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'paragraph-item-content';
+    
     const title = document.createElement('h3');
     const typeLabel = this.blockTypeManager.getTypeLabel(paragraph.type);
     const mainInfo = this.paragraphManager.getMainInfo(paragraph);
@@ -200,14 +203,29 @@ class UIManager {
     const preview = document.createElement('p');
     preview.textContent = paragraph.text || '(テキストなし)';
     
-    item.appendChild(title);
-    item.appendChild(preview);
+    contentWrapper.appendChild(title);
+    contentWrapper.appendChild(preview);
     
-    item.addEventListener('click', () => {
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'paragraph-delete-button';
+    deleteButton.textContent = '×';
+    deleteButton.title = '削除';
+    
+    item.appendChild(contentWrapper);
+    item.appendChild(deleteButton);
+    
+    contentWrapper.addEventListener('click', () => {
       const selectedParagraph = this.paragraphManager.selectParagraph(paragraph.id);
       if (selectedParagraph) {
         this.showEditor(selectedParagraph);
         this.updateParagraphSelection();
+      }
+    });
+    
+    deleteButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.deleteParagraphHandler) {
+        window.deleteParagraphHandler(paragraph.id);
       }
     });
     
@@ -264,7 +282,7 @@ class UIManager {
     return this.previewFormat;
   }
 
-  renderSceneList(scenes, currentSceneId, sceneClickHandler) {
+  renderSceneList(scenes, currentSceneId, sceneClickHandler, sceneRenameHandler) {
     this.sceneList.innerHTML = '';
     
     scenes.forEach(scene => {
@@ -291,8 +309,62 @@ class UIManager {
       
       item.addEventListener('click', () => sceneClickHandler(scene.id));
       
+      // ダブルクリックで編集モードに入る
+      title.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        this.makeSceneNameEditable(title, scene, sceneRenameHandler);
+      });
+      
       this.sceneList.appendChild(item);
     });
+  }
+
+  makeSceneNameEditable(titleElement, scene, sceneRenameHandler) {
+    const originalName = scene.name;
+    
+    // 入力フィールドを作成
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = originalName;
+    input.className = 'scene-name-input';
+    
+    // タイトル要素を入力フィールドに置き換え
+    titleElement.style.display = 'none';
+    titleElement.parentNode.insertBefore(input, titleElement.nextSibling);
+    
+    // 入力フィールドにフォーカスして全選択
+    input.focus();
+    input.select();
+    
+    const saveChanges = () => {
+      const newName = input.value.trim();
+      if (newName && newName !== originalName) {
+        sceneRenameHandler(scene.id, newName);
+      }
+      // 元の表示に戻す
+      titleElement.style.display = '';
+      input.remove();
+    };
+    
+    const cancelChanges = () => {
+      // 元の表示に戻す
+      titleElement.style.display = '';
+      input.remove();
+    };
+    
+    // Enterキーで保存、Escapeキーでキャンセル
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveChanges();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelChanges();
+      }
+    });
+    
+    // フォーカスが外れたら保存
+    input.addEventListener('blur', saveChanges);
   }
 
   updateCurrentSceneName(sceneName) {
