@@ -173,6 +173,46 @@ class ParagraphManager {
     
     return true;
   }
+  
+  selectNextParagraph() {
+    if (this.paragraphs.length === 0) return null;
+    
+    if (!this.selectedParagraphId) {
+      // 何も選択されていない場合は最初のブロックを選択
+      this.selectedParagraphId = this.paragraphs[0].id;
+      return this.paragraphs[0];
+    }
+    
+    const currentIndex = this.paragraphs.findIndex(p => p.id === this.selectedParagraphId);
+    if (currentIndex === -1 || currentIndex === this.paragraphs.length - 1) {
+      // 最後のブロックの場合は何もしない
+      return this.getSelectedParagraph();
+    }
+    
+    // 次のブロックを選択
+    this.selectedParagraphId = this.paragraphs[currentIndex + 1].id;
+    return this.paragraphs[currentIndex + 1];
+  }
+  
+  selectPreviousParagraph() {
+    if (this.paragraphs.length === 0) return null;
+    
+    if (!this.selectedParagraphId) {
+      // 何も選択されていない場合は最後のブロックを選択
+      this.selectedParagraphId = this.paragraphs[this.paragraphs.length - 1].id;
+      return this.paragraphs[this.paragraphs.length - 1];
+    }
+    
+    const currentIndex = this.paragraphs.findIndex(p => p.id === this.selectedParagraphId);
+    if (currentIndex === -1 || currentIndex === 0) {
+      // 最初のブロックの場合は何もしない
+      return this.getSelectedParagraph();
+    }
+    
+    // 前のブロックを選択
+    this.selectedParagraphId = this.paragraphs[currentIndex - 1].id;
+    return this.paragraphs[currentIndex - 1];
+  }
 }
 
 export { ParagraphManager };

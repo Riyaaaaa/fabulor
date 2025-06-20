@@ -1111,6 +1111,49 @@ class ScenarioManager {
           e.preventDefault();
           this.previewManager.closePreview();
         }
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        // 矢印キー: ブロック選択の移動
+        // テキストエリアやインプット要素にフォーカスがある場合はスキップ
+        const activeElement = document.activeElement;
+        const isTextInput = activeElement.tagName === 'TEXTAREA' || 
+                          activeElement.tagName === 'INPUT' ||
+                          activeElement.contentEditable === 'true';
+        
+        if (!isTextInput && this.paragraphManager.getParagraphs().length > 0) {
+          e.preventDefault();
+          
+          let selectedParagraph;
+          if (e.key === 'ArrowUp') {
+            selectedParagraph = this.paragraphManager.selectPreviousParagraph();
+          } else {
+            selectedParagraph = this.paragraphManager.selectNextParagraph();
+          }
+          
+          if (selectedParagraph) {
+            this.uiManager.showEditor(selectedParagraph);
+            this.uiManager.updateParagraphSelection();
+            
+            // 選択されたブロックを可視範囲にスクロール
+            const selectedElement = document.querySelector(`[data-paragraph-id="${selectedParagraph.id}"]`);
+            if (selectedElement) {
+              // スクロールコンテナを取得
+              const scrollContainer = document.querySelector('.paragraph-list-container');
+              if (scrollContainer) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const elementRect = selectedElement.getBoundingClientRect();
+                
+                // 要素がコンテナの可視範囲外にある場合のみスクロール
+                if (elementRect.top < containerRect.top) {
+                  // 上に隠れている場合
+                  scrollContainer.scrollTop -= containerRect.top - elementRect.top + 10;
+                } else if (elementRect.bottom > containerRect.bottom) {
+                  // 下に隠れている場合
+                  scrollContainer.scrollTop += elementRect.bottom - containerRect.bottom + 10;
+                }
+              }
+            }
+          }
+        }
       }
     });
   }
