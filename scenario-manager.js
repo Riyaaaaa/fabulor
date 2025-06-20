@@ -1134,24 +1134,29 @@ class ScenarioManager {
             this.uiManager.updateParagraphSelection();
             
             // 選択されたブロックを可視範囲にスクロール
-            const selectedElement = document.querySelector(`[data-paragraph-id="${selectedParagraph.id}"]`);
-            if (selectedElement) {
-              // スクロールコンテナを取得
-              const scrollContainer = document.querySelector('.paragraph-list-container');
-              if (scrollContainer) {
-                const containerRect = scrollContainer.getBoundingClientRect();
-                const elementRect = selectedElement.getBoundingClientRect();
-                
-                // 要素がコンテナの可視範囲外にある場合のみスクロール
-                if (elementRect.top < containerRect.top) {
-                  // 上に隠れている場合
-                  scrollContainer.scrollTop -= containerRect.top - elementRect.top + 10;
-                } else if (elementRect.bottom > containerRect.bottom) {
-                  // 下に隠れている場合
-                  scrollContainer.scrollTop += elementRect.bottom - containerRect.bottom + 10;
+            // 少し遅延させてDOMの更新を待つ
+            setTimeout(() => {
+              const selectedElement = document.querySelector(`[data-paragraph-id="${selectedParagraph.id}"]`);
+              if (selectedElement) {
+                // スクロールコンテナを取得
+                const scrollContainer = document.querySelector('.paragraph-list-container');
+                if (scrollContainer) {
+                  const containerRect = scrollContainer.getBoundingClientRect();
+                  const elementRect = selectedElement.getBoundingClientRect();
+                  
+                  // 要素がコンテナの可視範囲外にある場合のみスクロール
+                  if (elementRect.top < containerRect.top) {
+                    // 上に隠れている場合
+                    const scrollAmount = elementRect.top - containerRect.top - 10;
+                    scrollContainer.scrollTop += scrollAmount;
+                  } else if (elementRect.bottom > containerRect.bottom) {
+                    // 下に隠れている場合
+                    const scrollAmount = elementRect.bottom - containerRect.bottom + 10;
+                    scrollContainer.scrollTop += scrollAmount;
+                  }
                 }
               }
-            }
+            }, 50);
           }
         }
       }

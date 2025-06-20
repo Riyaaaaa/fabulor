@@ -192,6 +192,7 @@ class UIManager {
     const item = document.createElement('div');
     item.className = 'paragraph-item';
     item.dataset.id = paragraph.id;
+    item.dataset.paragraphId = paragraph.id;
     item.draggable = true;
     
     const dragHandle = document.createElement('div');
