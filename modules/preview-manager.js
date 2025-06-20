@@ -21,6 +21,11 @@ class PreviewManager {
     const previewModal = this.uiManager.getPreviewModal();
     previewModal.classList.remove('show');
   }
+  
+  isPreviewOpen() {
+    const previewModal = this.uiManager.getPreviewModal();
+    return previewModal.classList.contains('show');
+  }
 
   updatePreview() {
     const previewFormat = this.uiManager.getPreviewFormat();

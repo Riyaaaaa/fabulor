@@ -54,6 +54,9 @@ class ScenarioManager {
     document.getElementById('new-project-from-recent').addEventListener('click', () => this.newProject());
     document.getElementById('open-project-from-recent').addEventListener('click', () => this.openProject());
     
+    // キーボードショートカットのバインド
+    this.bindKeyboardShortcuts();
+    
     const editorContent = this.uiManager.getEditorContent();
     const tagsInput = this.uiManager.getTagsInput();
     const typeSelect = this.uiManager.getTypeSelect();
@@ -1006,6 +1009,108 @@ class ScenarioManager {
         e.preventDefault();
         e.returnValue = '保存されていない変更があります。このページを離れますか？';
         return e.returnValue;
+      }
+    });
+  }
+  
+  bindKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd キーの判定
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      
+      if (isCtrlOrCmd) {
+        switch(e.key.toLowerCase()) {
+          case 's':
+            // Ctrl/Cmd + S: 保存
+            e.preventDefault();
+            if (!document.getElementById('save-project').disabled) {
+              this.saveProject();
+            }
+            break;
+            
+          case 'n':
+            // Ctrl/Cmd + N: 新規プロジェクト
+            e.preventDefault();
+            this.newProject();
+            break;
+            
+          case 'o':
+            // Ctrl/Cmd + O: 開く
+            e.preventDefault();
+            this.openProject();
+            break;
+            
+          case 'e':
+            // Ctrl/Cmd + E: エクスポート（Shift併用で形式選択）
+            if (e.shiftKey) {
+              e.preventDefault();
+              if (!document.getElementById('export-text').disabled) {
+                this.exportText();
+              }
+            } else {
+              e.preventDefault();
+              if (!document.getElementById('export-csv').disabled) {
+                this.exportCSV();
+              }
+            }
+            break;
+            
+          case 'p':
+            // Ctrl/Cmd + P: プレビュー
+            e.preventDefault();
+            if (!document.getElementById('preview-novel').disabled) {
+              this.previewManager.showPreview();
+            }
+            break;
+            
+          case 'r':
+            // Ctrl/Cmd + R: スキーマリロード
+            e.preventDefault();
+            if (!document.getElementById('reload-schema').disabled) {
+              this.reloadSchema();
+            }
+            break;
+            
+          case 't':
+            // Ctrl/Cmd + T: 新規シーン
+            e.preventDefault();
+            if (!document.getElementById('add-scene').disabled) {
+              this.addScene();
+            }
+            break;
+            
+          case 'b':
+            // Ctrl/Cmd + B: 新規ブロック追加
+            e.preventDefault();
+            if (!document.getElementById('add-paragraph').disabled) {
+              this.addParagraph();
+            }
+            break;
+            
+          case 'd':
+            // Ctrl/Cmd + D: ブロック削除
+            if (e.shiftKey) {
+              e.preventDefault();
+              if (!document.getElementById('delete-paragraph').disabled) {
+                this.deleteParagraph();
+              }
+            }
+            break;
+            
+          case 'i':
+            // Ctrl/Cmd + I: テキストインポート
+            e.preventDefault();
+            if (!document.getElementById('import-text').disabled) {
+              this.importTextAsScene();
+            }
+            break;
+        }
+      } else if (e.key === 'Escape') {
+        // Escape: プレビューを閉じる
+        if (this.previewManager.isPreviewOpen()) {
+          e.preventDefault();
+          this.previewManager.closePreview();
+        }
       }
     });
   }
