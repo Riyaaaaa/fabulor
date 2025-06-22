@@ -1,5 +1,7 @@
 # Fabulor - シナリオライティングツール
 
+![Fabulor Preview](fabulor_preview.png)
+
 ## 特徴
 
 ### 🎯 ブロック単位での管理
