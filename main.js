@@ -360,6 +360,32 @@ ipcMain.handle('check-scene-exists', async (event, projectPath, sceneFileName) =
   }
 });
 
+ipcMain.handle('rename-scene-file', async (event, projectPath, sceneId, oldFileName, newFileName) => {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenesDir = `${projectDir}_scenes`;
+    
+    const oldPath = path.join(scenesDir, oldFileName);
+    const newPath = path.join(scenesDir, newFileName);
+    
+    // 旧ファイルが存在する場合のみリネーム
+    try {
+      await fs.access(oldPath);
+      await fs.rename(oldPath, newPath);
+      return { success: true };
+    } catch (error) {
+      // ファイルが存在しない場合は成功とみなす（まだ保存されていない新規シーン）
+      if (error.code === 'ENOENT') {
+        return { success: true };
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Scene file rename error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('save-new-scene', async (event, projectPath) => {
   try {
     const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去

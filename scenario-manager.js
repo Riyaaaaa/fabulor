@@ -851,8 +851,22 @@ class ScenarioManager {
   }
 
   async renameScene(sceneId, newName) {
-    if (this.sceneManager.renameScene(sceneId, newName)) {
+    const renameResult = this.sceneManager.renameScene(sceneId, newName);
+    if (renameResult.success) {
       this.markAsChanged();
+      
+      // ファイル名が変更された場合は、実際のファイルもリネーム
+      if (renameResult.fileNameChanged) {
+        const projectPath = this.projectManager.getProjectPath();
+        if (projectPath) {
+          try {
+            await window.electronAPI.renameSceneFile(projectPath, sceneId, renameResult.oldFileName, renameResult.newFileName);
+          } catch (error) {
+            console.error('シーンファイルのリネームエラー:', error);
+            // エラーが発生してもUI更新は続行
+          }
+        }
+      }
       
       // 現在のシーンの場合は表示を更新
       if (sceneId === this.sceneManager.getCurrentSceneId()) {
