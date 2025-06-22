@@ -7,6 +7,7 @@ import { PreviewManager } from './modules/preview-manager.js';
 import { SceneManager } from './modules/scene-manager.js';
 import { CharacterManager } from './modules/character-manager.js';
 import { TextImporter } from './modules/text-importer.js';
+import { HistoryManager, MoveBlockOperation, EditBlockOperation, DeleteBlockOperation, AddBlockOperation } from './modules/history-manager.js';
 
 class ScenarioManager {
   constructor() {
@@ -18,6 +19,11 @@ class ScenarioManager {
     this.textImporter = new TextImporter(this.paragraphManager);
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager, this.characterManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
+    this.historyManager = new HistoryManager();
+    
+    // 編集開始時の状態を保存するための変数
+    this.editStartState = null;
+    this.editTimer = null;
     
     // グローバルハンドラーを登録
     window.deleteParagraphHandler = (id) => this.deleteParagraph(id);
@@ -62,7 +68,11 @@ class ScenarioManager {
     const typeSelect = this.uiManager.getTypeSelect();
     
     editorContent.addEventListener('input', () => this.updateCurrentParagraph());
+    editorContent.addEventListener('focus', () => this.startEdit());
+    editorContent.addEventListener('blur', () => this.finishEdit());
     tagsInput.addEventListener('input', () => this.updateCurrentParagraph());
+    tagsInput.addEventListener('focus', () => this.startEdit());
+    tagsInput.addEventListener('blur', () => this.finishEdit());
     typeSelect.addEventListener('change', () => this.onTypeChange());
     
     this.bindSchemaEvents();
@@ -87,6 +97,8 @@ class ScenarioManager {
         if (element) {
           element.addEventListener('input', () => this.updateCurrentParagraph());
           element.addEventListener('change', () => this.updateCurrentParagraph());
+          element.addEventListener('focus', () => this.startEdit());
+          element.addEventListener('blur', () => this.finishEdit());
         }
       });
     });
@@ -94,6 +106,7 @@ class ScenarioManager {
 
   addParagraph() {
     const newParagraph = this.paragraphManager.addParagraph();
+    
     this.markAsChanged();
     this.uiManager.renderParagraphList();
     const selectedParagraph = this.paragraphManager.selectParagraph(newParagraph.id);
@@ -101,12 +114,20 @@ class ScenarioManager {
       this.uiManager.showEditor(selectedParagraph);
       this.uiManager.updateParagraphSelection();
     }
+    
+    // Undo/Redo操作を履歴に追加（既に追加済みなのでskipExecute=true）
+    const operation = new AddBlockOperation(this.paragraphManager, this.uiManager, newParagraph.id);
+    this.historyManager.executeOperation(operation, true);
   }
 
   deleteParagraph(paragraphId = null) {
     const idToDelete = paragraphId || this.paragraphManager.getSelectedParagraphId();
     if (!idToDelete) return;
     
+    // 削除前にUndo/Redo操作を作成（実行はDeleteBlockOperationのコンストラクタで状態を保存）
+    const operation = new DeleteBlockOperation(this.paragraphManager, this.uiManager, idToDelete);
+    
+    // 実際の削除を実行
     if (this.paragraphManager.deleteParagraph(idToDelete)) {
       this.markAsChanged();
       this.uiManager.renderParagraphList();
@@ -115,6 +136,9 @@ class ScenarioManager {
       if (idToDelete === this.paragraphManager.getSelectedParagraphId()) {
         this.uiManager.showPlaceholder();
       }
+      
+      // 履歴に追加（既に削除済みなのでskipExecute=true）
+      this.historyManager.executeOperation(operation, true);
     }
   }
 
@@ -173,6 +197,12 @@ class ScenarioManager {
 
   async loadProject(projectData, projectPath) {
     try {
+      // 編集中の場合は履歴を確定
+      this.finishEdit();
+      
+      // 履歴をクリア
+      this.historyManager.clear();
+      
       this.projectManager.setProjectPath(projectPath);
       this.sceneManager.setProjectPath(projectPath);
       
@@ -291,6 +321,12 @@ class ScenarioManager {
       if (!confirmed) return;
     }
     
+    // 編集中の場合は履歴を確定
+    this.finishEdit();
+    
+    // 履歴をクリア
+    this.historyManager.clear();
+    
     // まずプロジェクトファイルを保存
     const saveResult = await window.electronAPI.saveProject({
       version: '2.0.0',
@@ -400,10 +436,17 @@ class ScenarioManager {
   }
 
   reorderParagraphs(draggedId, targetId, insertAfter = false) {
+    // 移動前にUndo/Redo操作を作成
+    const operation = new MoveBlockOperation(this.paragraphManager, this.uiManager, draggedId, targetId, insertAfter);
+    
+    // 実際の移動を実行
     if (this.paragraphManager.reorderParagraphs(draggedId, targetId, insertAfter)) {
       this.markAsChanged();
       this.uiManager.renderParagraphList();
       this.uiManager.updateParagraphSelection();
+      
+      // 履歴に追加（既に移動済みなのでskipExecute=true）
+      this.historyManager.executeOperation(operation, true);
     }
   }
 
@@ -647,6 +690,14 @@ class ScenarioManager {
     const typeSelect = this.uiManager.getTypeSelect();
     const editorContent = this.uiManager.getEditorContent();
     const newType = typeSelect.value;
+    
+    const selectedParagraph = this.paragraphManager.getSelectedParagraph();
+    if (!selectedParagraph) return;
+    
+    // 変更前の状態を保存
+    const oldData = JSON.parse(JSON.stringify(selectedParagraph));
+    
+    // UIを更新
     this.uiManager.showTypeParams(newType);
     
     // ブロックタイプ定義に基づいてテキスト入力を制御
@@ -660,9 +711,6 @@ class ScenarioManager {
       editorContent.placeholder = 'ここにテキストを入力...';
     }
     
-    const selectedParagraph = this.paragraphManager.getSelectedParagraph();
-    if (!selectedParagraph) return;
-    
     const oldType = selectedParagraph.type;
     selectedParagraph.type = newType;
     selectedParagraph.updatedAt = new Date().toISOString();
@@ -675,13 +723,59 @@ class ScenarioManager {
     this.uiManager.clearTypeParams(oldType);
     this.paragraphManager.setDefaultParams(selectedParagraph, newType);
     this.uiManager.loadTypeParams(selectedParagraph);
+    
+    // 変更後の状態を保存してundo/redo操作を作成
+    const newData = JSON.parse(JSON.stringify(selectedParagraph));
+    const operation = new EditBlockOperation(
+      this.paragraphManager,
+      this.uiManager,
+      selectedParagraph.id,
+      oldData,
+      newData
+    );
+    // 既に変更が適用されているので、executeをスキップ
+    this.historyManager.executeOperation(operation, true);
+    
     this.markAsChanged();
     this.uiManager.updateParagraphListItem(selectedParagraph);
+  }
+
+  // 編集開始時の状態を記録
+  startEdit() {
+    const selectedParagraph = this.paragraphManager.getSelectedParagraph();
+    if (selectedParagraph && !this.historyManager.isExecuting) {
+      this.editStartState = JSON.parse(JSON.stringify(selectedParagraph));
+    }
+  }
+
+  // 編集完了時にundo/redo操作を履歴に追加
+  finishEdit() {
+    const selectedParagraph = this.paragraphManager.getSelectedParagraph();
+    if (selectedParagraph && this.editStartState && !this.historyManager.isExecuting) {
+      // 変更があった場合のみ履歴に追加
+      const currentState = JSON.parse(JSON.stringify(selectedParagraph));
+      if (JSON.stringify(this.editStartState) !== JSON.stringify(currentState)) {
+        const operation = new EditBlockOperation(
+          this.paragraphManager, 
+          this.uiManager, 
+          selectedParagraph.id, 
+          this.editStartState, 
+          currentState
+        );
+        this.historyManager.executeOperation(operation);
+      }
+    }
+    this.editStartState = null;
   }
 
   updateCurrentParagraph() {
     const selectedParagraph = this.paragraphManager.getSelectedParagraph();
     if (!selectedParagraph) return;
+    
+    // 編集開始状態を記録（まだ記録されていない場合）
+    if (!this.editStartState && !this.historyManager.isExecuting) {
+      this.editStartState = JSON.parse(JSON.stringify(selectedParagraph));
+    }
     
     const editorContent = this.uiManager.getEditorContent();
     const tagsInput = this.uiManager.getTagsInput();
@@ -704,6 +798,14 @@ class ScenarioManager {
       });
     }
     
+    // 編集タイマーをリセット（一定時間後に自動的に履歴を作成）
+    if (this.editTimer) {
+      clearTimeout(this.editTimer);
+    }
+    this.editTimer = setTimeout(() => {
+      this.finishEdit();
+    }, 2000); // 2秒間編集がない場合に履歴を作成
+    
     this.markAsChanged();
     this.uiManager.updateParagraphListItem(selectedParagraph);
   }
@@ -715,6 +817,26 @@ class ScenarioManager {
 
   updateTitle() {
     this.projectManager.updateTitle();
+  }
+
+  // Undo操作
+  undo() {
+    // 編集中の場合は先に履歴を確定
+    this.finishEdit();
+    
+    if (this.historyManager.undo()) {
+      this.markAsChanged();
+    }
+  }
+
+  // Redo操作
+  redo() {
+    // 編集中の場合は先に履歴を確定
+    this.finishEdit();
+    
+    if (this.historyManager.redo()) {
+      this.markAsChanged();
+    }
   }
 
   async reloadSchema() {
@@ -808,8 +930,14 @@ class ScenarioManager {
   }
 
   async selectScene(sceneId) {
+    // 編集中の場合は履歴を確定
+    this.finishEdit();
+    
     // 現在のシーンを保存
     await this.saveCurrentScene();
+    
+    // シーン切り替え時にundo/redo履歴をクリア
+    this.historyManager.clear();
     
     const scene = this.sceneManager.selectScene(sceneId);
     if (!scene) return;
@@ -1169,6 +1297,18 @@ class ScenarioManager {
             if (!document.getElementById('import-text').disabled) {
               this.importTextAsScene();
             }
+            break;
+            
+          case 'z':
+            // Ctrl/Cmd + Z: Undo
+            e.preventDefault();
+            this.undo();
+            break;
+            
+          case 'y':
+            // Ctrl/Cmd + Y: Redo
+            e.preventDefault();
+            this.redo();
             break;
         }
       } else if (e.key === 'Escape') {
