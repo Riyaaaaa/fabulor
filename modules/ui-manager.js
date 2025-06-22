@@ -373,7 +373,7 @@ class UIManager {
     return this.previewFormat;
   }
 
-  renderSceneList(scenes, currentSceneId, sceneClickHandler, sceneRenameHandler) {
+  renderSceneList(scenes, currentSceneId, sceneClickHandler, sceneRenameHandler, sceneDeleteHandler) {
     this.sceneList.innerHTML = '';
     
     scenes.forEach(scene => {
@@ -389,19 +389,30 @@ class UIManager {
         item.classList.add('missing');
       }
       
+      const contentWrapper = document.createElement('div');
+      contentWrapper.className = 'scene-item-content';
+      
       const title = document.createElement('h3');
       title.textContent = scene.name;
       
       const info = document.createElement('p');
       info.textContent = scene.fileName;
       
-      item.appendChild(title);
-      item.appendChild(info);
+      contentWrapper.appendChild(title);
+      contentWrapper.appendChild(info);
+      
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'scene-delete-button';
+      deleteButton.textContent = '×';
+      deleteButton.title = '削除';
+      
+      item.appendChild(contentWrapper);
+      item.appendChild(deleteButton);
       
       // クリックイベントの遅延処理でダブルクリックとの競合を防ぐ
       let clickTimer = null;
       
-      item.addEventListener('click', (e) => {
+      contentWrapper.addEventListener('click', (e) => {
         if (e.target === title || title.contains(e.target)) {
           // タイトル部分のクリックは遅延処理
           if (clickTimer) {
@@ -415,6 +426,14 @@ class UIManager {
         } else {
           // タイトル以外の部分は即座に処理
           sceneClickHandler(scene.id);
+        }
+      });
+      
+      // 削除ボタンのクリックイベント
+      deleteButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (sceneDeleteHandler) {
+          sceneDeleteHandler(scene.id, scene.name);
         }
       });
       
