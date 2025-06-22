@@ -734,6 +734,15 @@ class ScenarioManager {
       // スキーマをリロード
       await this.blockTypeManager.loadSchemaFile(projectPath, schemaFileName);
       
+      // キャラクターファイルもリロード
+      try {
+        const projectName = projectPath.split('/').pop().replace('.fbl', '');
+        const charactersFileName = `${projectName}_characters.yaml`;
+        await this.characterManager.loadCharactersFile(projectPath, charactersFileName);
+      } catch (error) {
+        console.error('キャラクターファイル再読み込みエラー:', error);
+      }
+      
       // UIを再生成
       this.uiManager.generateTypeUI();
       this.bindSchemaEvents();
@@ -750,7 +759,7 @@ class ScenarioManager {
         }
       }
       
-      alert('スキーマファイルを再読込しました');
+      alert('スキーマファイルとキャラクターファイルを再読込しました');
     } catch (error) {
       console.error('スキーマ再読込エラー:', error);
       alert(`スキーマの再読込に失敗しました\n\nエラー内容: ${error.message}`);
