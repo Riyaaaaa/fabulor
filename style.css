@@ -321,6 +321,19 @@ main {
   background-color: #cd3636;
 }
 
+.block-number {
+  color: #888;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0 0.75rem;
+  min-width: 2.5rem;
+  text-align: right;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .drag-handle {
   width: 12px;
   height: 20px;

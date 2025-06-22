@@ -182,18 +182,22 @@ class UIManager {
     this.paragraphList.innerHTML = '';
     
     const paragraphs = this.paragraphManager.getParagraphs();
-    paragraphs.forEach(paragraph => {
-      const item = this.createParagraphListItem(paragraph);
+    paragraphs.forEach((paragraph, index) => {
+      const item = this.createParagraphListItem(paragraph, index + 1);
       this.paragraphList.appendChild(item);
     });
   }
 
-  createParagraphListItem(paragraph) {
+  createParagraphListItem(paragraph, blockNumber) {
     const item = document.createElement('div');
     item.className = 'paragraph-item';
     item.dataset.id = paragraph.id;
     item.dataset.paragraphId = paragraph.id;
     item.draggable = true;
+    
+    const blockNumberElem = document.createElement('div');
+    blockNumberElem.className = 'block-number';
+    blockNumberElem.textContent = blockNumber || '';
     
     const dragHandle = document.createElement('div');
     dragHandle.className = 'drag-handle';
@@ -219,6 +223,7 @@ class UIManager {
     deleteButton.textContent = '×';
     deleteButton.title = '削除';
     
+    item.appendChild(blockNumberElem);
     item.appendChild(dragHandle);
     item.appendChild(contentWrapper);
     item.appendChild(deleteButton);
