@@ -360,6 +360,54 @@ ipcMain.handle('check-scene-exists', async (event, projectPath, sceneFileName) =
   }
 });
 
+// scenesディレクトリ内のすべてのシーンファイルを取得
+ipcMain.handle('scan-scenes-directory', async (event, projectPath) => {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenesDir = `${projectDir}_scenes`;
+    
+    // ディレクトリが存在するか確認
+    try {
+      await fs.access(scenesDir);
+    } catch {
+      // ディレクトリが存在しない場合は空の配列を返す
+      return { success: true, scenes: [] };
+    }
+    
+    // ディレクトリ内のファイル一覧を取得
+    const files = await fs.readdir(scenesDir);
+    
+    // JSONファイルのみをフィルタリングして、各ファイルの内容を読み取る
+    const scenes = [];
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        try {
+          const filePath = path.join(scenesDir, file);
+          const content = await fs.readFile(filePath, 'utf8');
+          const sceneData = JSON.parse(content);
+          
+          // シーンデータにファイル名を追加
+          scenes.push({
+            id: sceneData.id,
+            name: sceneData.name,
+            fileName: file,
+            createdAt: sceneData.createdAt,
+            updatedAt: sceneData.updatedAt
+          });
+        } catch (error) {
+          console.error(`Failed to read scene file ${file}:`, error);
+          // エラーが発生したファイルはスキップ
+        }
+      }
+    }
+    
+    return { success: true, scenes: scenes };
+  } catch (error) {
+    console.error('Scan scenes directory error:', error);
+    return { success: false, error: error.message, scenes: [] };
+  }
+});
+
 ipcMain.handle('rename-scene-file', async (event, projectPath, sceneId, oldFileName, newFileName) => {
   try {
     const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
@@ -382,6 +430,30 @@ ipcMain.handle('rename-scene-file', async (event, projectPath, sceneId, oldFileN
     }
   } catch (error) {
     console.error('Scene file rename error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// シーンファイルを削除
+ipcMain.handle('delete-scene-file', async (event, projectPath, fileName) => {
+  try {
+    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+    const scenePath = path.join(`${projectDir}_scenes`, fileName);
+    
+    // ファイルが存在する場合は削除
+    try {
+      await fs.access(scenePath);
+      await fs.unlink(scenePath);
+      return { success: true };
+    } catch (error) {
+      // ファイルが存在しない場合も成功とみなす
+      if (error.code === 'ENOENT') {
+        return { success: true };
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Scene file delete error:', error);
     return { success: false, error: error.message };
   }
 });

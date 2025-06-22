@@ -224,25 +224,20 @@ class ScenarioManager {
         console.warn('キャラクターファイルの読み込みに失敗しました:', error.message);
       }
       
-      // シーンリストをロード
+      // scenesディレクトリから直接シーン一覧を取得
       try {
-        this.sceneManager.loadScenesFromProject(projectData.scenes || []);
+        const scanResult = await window.electronAPI.scanScenesDirectory(projectPath);
+        if (scanResult.success) {
+          this.sceneManager.loadScenesFromDirectory(scanResult.scenes);
+        } else {
+          console.error('シーンディレクトリスキャンエラー:', scanResult.error);
+          // エラーが発生しても空のシーンリストで続行
+          this.sceneManager.loadScenesFromDirectory([]);
+        }
       } catch (error) {
         console.error('シーンリスト読み込みエラー:', error);
         alert(`シーンリストの読み込みに失敗しました:\n${error.message}`);
         return;
-      }
-
-      // 各シーンの存在チェック
-      const scenes = this.sceneManager.getScenes();
-      for (const scene of scenes) {
-        try {
-          const existsResult = await window.electronAPI.checkSceneExists(projectPath, scene.fileName);
-          this.sceneManager.markSceneAsExisting(scene.id, existsResult.exists);
-        } catch (error) {
-          console.warn('シーンファイル存在チェックエラー:', scene.fileName, error);
-          this.sceneManager.markSceneAsExisting(scene.id, false);
-        }
       }
 
       // レガシーデータの処理（v1.0.0からのマイグレーション）
@@ -332,7 +327,6 @@ class ScenarioManager {
       version: '2.0.0',
       createdAt: new Date().toISOString(),
       schemaFile: '', // 後で設定
-      scenes: [],
       currentSceneId: null
     }, null);
     
@@ -378,10 +372,9 @@ class ScenarioManager {
     // 現在のシーンを保存
     await this.saveCurrentScene();
     
-    // プロジェクトファイルを保存
-    const sceneList = this.sceneManager.getSceneListForProject();
+    // プロジェクトファイルを保存（シーン一覧は含めない）
     const currentSceneId = this.sceneManager.getCurrentSceneId();
-    const result = await this.projectManager.saveProject(sceneList, currentSceneId);
+    const result = await this.projectManager.saveProject([], currentSceneId);
     
     if (result.success) {
       this.sceneManager.setProjectPath(result.path);
@@ -1038,8 +1031,21 @@ class ScenarioManager {
     const projectPath = this.projectManager.getProjectPath();
     if (!projectPath) return;
     
+    // 削除するシーンのファイル名を取得
+    const scene = this.sceneManager.getScenes().find(s => s.id === sceneId);
+    if (!scene) return;
+    
     // 削除するシーンが現在のシーンかどうか
     const isCurrentScene = sceneId === this.sceneManager.getCurrentSceneId();
+    
+    // ファイルシステムから削除
+    try {
+      await window.electronAPI.deleteSceneFile(projectPath, scene.fileName);
+    } catch (error) {
+      console.error('シーンファイルの削除エラー:', error);
+      alert(`シーンファイルの削除に失敗しました:\n${error.message}`);
+      return;
+    }
     
     // シーンを削除
     if (this.sceneManager.deleteScene(sceneId)) {

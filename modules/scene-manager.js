@@ -114,7 +114,7 @@ class SceneManager {
     return `${projectDir}_scenes/${scene.fileName}`;
   }
 
-  // プロジェクトファイル用のシーンリストを生成
+  // プロジェクトファイル用のシーンリストを生成（互換性のため残す）
   getSceneListForProject() {
     return Array.from(this.scenes.values()).map(scene => ({
       id: scene.id,
@@ -123,8 +123,8 @@ class SceneManager {
     }));
   }
 
-  // プロジェクトファイルからシーンリストを復元
-  loadScenesFromProject(sceneList) {
+  // scenesディレクトリから読み込んだシーンリストを設定
+  loadScenesFromDirectory(sceneList) {
     this.scenes.clear();
     this.currentSceneId = null;
     
@@ -137,7 +137,7 @@ class SceneManager {
         fileName: sceneInfo.fileName,
         createdAt: sceneInfo.createdAt || new Date().toISOString(),
         updatedAt: sceneInfo.updatedAt || new Date().toISOString(),
-        exists: false, // 実際のファイル存在は後でチェック
+        exists: true, // ディレクトリから読み込んだファイルは存在する
         paragraphs: []
       };
       
