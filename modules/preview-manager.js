@@ -1,8 +1,9 @@
 // プレビュー管理モジュール
 class PreviewManager {
-  constructor(paragraphManager, uiManager) {
+  constructor(paragraphManager, uiManager, characterManager) {
     this.paragraphManager = paragraphManager;
     this.uiManager = uiManager;
+    this.characterManager = characterManager;
   }
 
   showPreview() {
@@ -76,20 +77,26 @@ class PreviewManager {
     paragraphs.forEach(paragraph => {
       if (!paragraph.text.trim()) return;
       
+      // 台本形式では「セリフ」と「モノローグ」のみを表示
+      if (paragraph.type !== 'dialogue' && paragraph.type !== 'monologue') {
+        return;
+      }
+      
       const paragraphDiv = document.createElement('div');
       paragraphDiv.className = 'paragraph';
       
       // セリフタイプの場合は話者名を表示（設定されている場合のみ）
-      if (paragraph.type === 'dialogue' && paragraph.speaker && paragraph.speaker.trim()) {
+      const characterName = this.getCharacterName(paragraph);
+      if (paragraph.type === 'dialogue' && characterName) {
         const speakerDiv = document.createElement('div');
         speakerDiv.className = 'speaker';
-        speakerDiv.textContent = paragraph.speaker;
+        speakerDiv.textContent = characterName;
         paragraphDiv.appendChild(speakerDiv);
-      } else if (paragraph.type === 'monologue' && paragraph.speaker && paragraph.speaker.trim()) {
+      } else if (paragraph.type === 'monologue' && characterName) {
         // モノローグの場合は話者名に（心の声）を追加
         const speakerDiv = document.createElement('div');
         speakerDiv.className = 'speaker monologue-speaker';
-        speakerDiv.textContent = `${paragraph.speaker}（心の声）`;
+        speakerDiv.textContent = `${characterName}（心の声）`;
         paragraphDiv.appendChild(speakerDiv);
       }
       
@@ -111,6 +118,14 @@ class PreviewManager {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // キャラクターIDから名前を取得するヘルパーメソッド
+  getCharacterName(paragraph) {
+    if (!paragraph.speaker) return null;
+    
+    const character = this.characterManager.getCharacterById(paragraph.speaker);
+    return character ? character.name : null;
   }
 
   // テキスト形式でのプレビュー内容生成
@@ -146,11 +161,17 @@ class PreviewManager {
       paragraphs.forEach(paragraph => {
         if (!paragraph.text.trim()) return;
         
+        // 台本形式では「セリフ」と「モノローグ」のみを表示
+        if (paragraph.type !== 'dialogue' && paragraph.type !== 'monologue') {
+          return;
+        }
+        
         // セリフタイプの場合は話者名を表示（設定されている場合のみ）
-        if (paragraph.type === 'dialogue' && paragraph.speaker && paragraph.speaker.trim()) {
-          textContent += `${paragraph.speaker}：\n`;
-        } else if (paragraph.type === 'monologue' && paragraph.speaker && paragraph.speaker.trim()) {
-          textContent += `${paragraph.speaker}（心の声）：\n`;
+        const characterName = this.getCharacterName(paragraph);
+        if (paragraph.type === 'dialogue' && characterName) {
+          textContent += `${characterName}：\n`;
+        } else if (paragraph.type === 'monologue' && characterName) {
+          textContent += `${characterName}（心の声）：\n`;
         }
         
         // 末尾の改行や空行を除去
@@ -160,8 +181,6 @@ class PreviewManager {
         if (paragraph.type === 'dialogue') {
           textContent += `${trimmedText}\n\n`;
         } else if (paragraph.type === 'monologue') {
-          textContent += `${trimmedText}\n\n`;
-        } else {
           textContent += `${trimmedText}\n\n`;
         }
       });

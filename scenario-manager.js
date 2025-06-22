@@ -8,6 +8,7 @@ import { SceneManager } from './modules/scene-manager.js';
 import { CharacterManager } from './modules/character-manager.js';
 import { TextImporter } from './modules/text-importer.js';
 import { HistoryManager, MoveBlockOperation, EditBlockOperation, DeleteBlockOperation, AddBlockOperation } from './modules/history-manager.js';
+import { ResizeManager } from './modules/resize-manager.js';
 
 class ScenarioManager {
   constructor() {
@@ -18,8 +19,9 @@ class ScenarioManager {
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
     this.textImporter = new TextImporter(this.paragraphManager);
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager, this.characterManager);
-    this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
+    this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager, this.characterManager);
     this.historyManager = new HistoryManager();
+    this.resizeManager = new ResizeManager();
     
     // 編集開始時の状態を保存するための変数
     this.editStartState = null;
@@ -655,11 +657,18 @@ class ScenarioManager {
       paragraphs.forEach(paragraph => {
         if (!paragraph.text || !paragraph.text.trim()) return;
         
+        // 台本形式では「セリフ」と「モノローグ」のみを表示
+        if (paragraph.type !== 'dialogue' && paragraph.type !== 'monologue') {
+          return;
+        }
+        
         // セリフタイプの場合は話者名を表示（設定されている場合のみ）
-        if (paragraph.type === 'dialogue' && paragraph.speaker && paragraph.speaker.trim()) {
-          textContent += `${paragraph.speaker}：\n`;
-        } else if (paragraph.type === 'monologue' && paragraph.speaker && paragraph.speaker.trim()) {
-          textContent += `${paragraph.speaker}（心の声）：\n`;
+        const character = this.characterManager.getCharacterById(paragraph.speaker);
+        const characterName = character ? character.name : null;
+        if (paragraph.type === 'dialogue' && characterName) {
+          textContent += `${characterName}：\n`;
+        } else if (paragraph.type === 'monologue' && characterName) {
+          textContent += `${characterName}（心の声）：\n`;
         }
         
         // 末尾の改行や空行を除去
@@ -669,8 +678,6 @@ class ScenarioManager {
         if (paragraph.type === 'dialogue') {
           textContent += `${trimmedText}\n\n`;
         } else if (paragraph.type === 'monologue') {
-          textContent += `${trimmedText}\n\n`;
-        } else {
           textContent += `${trimmedText}\n\n`;
         }
       });
