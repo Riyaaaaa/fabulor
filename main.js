@@ -739,7 +739,7 @@ function formatStructForCSV(structValue, structType, structs) {
   Object.keys(structDef.properties).forEach(propKey => {
     const propValue = structValue[propKey];
     if (propValue !== undefined && propValue !== null && propValue !== '') {
-      pairs.push(`${propKey}="${propValue}"`);
+      pairs.push(`${propKey}=${propValue}`);
     }
   });
   
