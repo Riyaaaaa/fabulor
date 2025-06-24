@@ -1,0 +1,105 @@
+# ブロックタイプ定義ファイル（テンプレート）
+# このファイルは標準的なブロックタイプの定義を含みます
+# プロジェクトで使用する場合は、このファイルをコピーして編集してください
+
+# 列挙型定義
+# ブロックのパラメータのtypeとして使用できる列挙型を定義
+enums:
+  character:
+    fields:
+      - id: 1
+        name: main_character
+        label: "主人公"
+      - id: 2
+        name: sub_character
+        label: "ヒロイン"
+      - id: 3
+        name: villain
+        label: "悪役"
+      - id: 4
+        name: supporting
+        label: "脇役"
+  
+  emotion:
+    fields:
+      - id: 1
+        name: happy
+        label: "喜び"
+      - id: 2
+        name: sad
+        label: "悲しみ"
+      - id: 3
+        name: angry
+        label: "怒り"
+      - id: 4
+        name: surprised
+        label: "驚き"
+      - id: 5
+        name: calm
+        label: "冷静"
+      - id: 6
+        name: excited
+        label: "興奮"
+
+# カスタム構造体定義
+# ブロックのパラメータのtypeとして使用できる新しい型を定義
+structs:
+  option_param:
+    properties:
+      option_text:
+        type: string
+      goto_label:
+        type: string
+
+# 標準ブロックタイプ定義
+# プロジェクトで必要に応じてカスタマイズ可能
+block_types:
+  # 基本的な会話・文章ブロック
+  dialogue:
+    label: "セリフ"
+    description: "キャラクターの台詞"
+    requires_text: true
+    parameters:
+      speaker:
+        type: "character"
+        label: "話者"
+        default: ""
+        required: false
+      emotion:
+        type: "emotion"
+        label: "感情"
+        default: ""
+        required: false
+
+  monologue:
+    label: "モノローグ"
+    description: "キャラクターの心の中の思考"
+    requires_text: true
+    parameters:
+      speaker:
+        type: "character"
+        label: "話者"
+        default: ""
+        required: false
+      emotion:
+        type: "emotion"
+        label: "感情"
+        default: ""
+        required: false
+
+  narrative:
+    label: "地の文"
+    description: "小説の地の文・説明文"
+    requires_text: true
+    parameters: {}
+
+  display_options:
+    label: "選択肢を表示"
+    requires_text: false
+    parameters:
+      option01:
+        label: "選択肢01"
+        type: option_param
+      option02:
+        label: "選択肢02"
+        type: option_param

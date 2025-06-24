@@ -21,7 +21,7 @@ class ScenarioManager {
     this.characterManager = new CharacterManager();
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
     this.textImporter = new TextImporter(this.paragraphManager);
-    this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager, this.characterManager);
+    this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager, this.characterManager);
     this.historyManager = new HistoryManager();
     this.resizeManager = new ResizeManager();
@@ -595,11 +595,12 @@ class ScenarioManager {
       return;
     }
     
-    // ブロックタイプ定義と構造体定義を取得
+    // ブロックタイプ定義、構造体定義、列挙型定義を取得
     const blockTypes = this.blockTypeManager.getBlockTypes();
     const structs = this.blockTypeManager.getStructs();
+    const enums = this.blockTypeManager.getEnums();
     
-    await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, blockTypes, structs);
+    await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, blockTypes, structs, enums);
   }
 
   async exportText() {

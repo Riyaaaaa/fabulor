@@ -1,10 +1,9 @@
 // UI管理モジュール
 class UIManager {
-  constructor(blockTypeManager, paragraphManager, projectManager, characterManager) {
+  constructor(blockTypeManager, paragraphManager, projectManager) {
     this.blockTypeManager = blockTypeManager;
     this.paragraphManager = paragraphManager;
     this.projectManager = projectManager;
-    this.characterManager = characterManager;
     this.typeParamContainers = {};
     this.typeParams = {};
     this.draggedElement = null; // グローバルなドラッグ状態
@@ -88,23 +87,9 @@ class UIManager {
               optionElement.textContent = option.label;
               inputElement.appendChild(optionElement);
             });
-          } else if (paramDef.type === 'character_select') {
-            // キャラクター選択用のセレクト
-            inputElement = document.createElement('select');
-            this.populateCharacterSelect(inputElement);
-            
-            // キャラクター選択時に感情セレクトを更新
-            inputElement.addEventListener('change', () => {
-              this.handleCharacterSelectionChange(inputElement.value, typeKey);
-            });
-          } else if (paramDef.type === 'emotion_select') {
-            // 感情選択用のセレクト
-            inputElement = document.createElement('select');
-            // 初期状態では空の感情リスト
-            const emptyOption = document.createElement('option');
-            emptyOption.value = '';
-            emptyOption.textContent = 'なし';
-            inputElement.appendChild(emptyOption);
+          } else if (this.blockTypeManager.isValidEnumType(paramDef.type)) {
+            // enum型の場合は選択リストを作成
+            inputElement = this.createEnumSelectElement(paramDef.type);
           } else if (this.blockTypeManager.isValidStructType(paramDef.type)) {
             // struct型の場合は複合入力UI要素を作成
             inputElement = this.createStructInputElement(paramDef.type, typeKey, paramKey);
@@ -546,44 +531,6 @@ class UIManager {
     }
   }
 
-  populateCharacterSelect(selectElement) {
-    // 空のオプションを追加
-    const emptyOption = document.createElement('option');
-    emptyOption.value = '';
-    emptyOption.textContent = 'キャラクターを選択';
-    selectElement.appendChild(emptyOption);
-
-    // キャラクターオプションを追加
-    const characterOptions = this.characterManager.getCharacterOptions();
-    characterOptions.forEach(option => {
-      const optionElement = document.createElement('option');
-      optionElement.value = option.value;
-      optionElement.textContent = option.label;
-      selectElement.appendChild(optionElement);
-    });
-  }
-
-  updateEmotionSelect(characterId, emotionSelectElement) {
-    // 既存のオプションをクリア
-    emotionSelectElement.innerHTML = '';
-
-    // 感情オプションを追加
-    const emotionOptions = this.characterManager.getEmotionOptions(characterId);
-    emotionOptions.forEach(option => {
-      const optionElement = document.createElement('option');
-      optionElement.value = option.value;
-      optionElement.textContent = option.label;
-      emotionSelectElement.appendChild(optionElement);
-    });
-  }
-
-  handleCharacterSelectionChange(characterId, typeKey) {
-    // 対応する感情セレクトを更新
-    const emotionSelect = this.typeParams[typeKey]['emotion'];
-    if (emotionSelect) {
-      this.updateEmotionSelect(characterId, emotionSelect);
-    }
-  }
 
   // struct型のパラメータ用UI要素を作成
   createStructInputElement(structType, typeKey, paramKey) {
@@ -680,6 +627,38 @@ class UIManager {
     });
 
     return structContainer;
+  }
+
+  // enum型の選択リストを作成
+  createEnumSelectElement(enumType) {
+    const enumDef = this.blockTypeManager.getEnum(enumType);
+    if (!enumDef || !enumDef.fields) {
+      console.error(`Enum definition not found: ${enumType}`);
+      const errorElement = document.createElement('select');
+      const errorOption = document.createElement('option');
+      errorOption.value = '';
+      errorOption.textContent = `Enum "${enumType}" が見つかりません`;
+      errorElement.appendChild(errorOption);
+      return errorElement;
+    }
+
+    const selectElement = document.createElement('select');
+    
+    // 空のオプションを追加
+    const emptyOption = document.createElement('option');
+    emptyOption.value = '';
+    emptyOption.textContent = '選択してください';
+    selectElement.appendChild(emptyOption);
+
+    // enum定義からオプションを作成
+    enumDef.fields.forEach(field => {
+      const optionElement = document.createElement('option');
+      optionElement.value = field.name;
+      optionElement.textContent = field.label;
+      selectElement.appendChild(optionElement);
+    });
+
+    return selectElement;
   }
 
   // struct型パラメータの値を取得

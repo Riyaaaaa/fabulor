@@ -4,61 +4,11 @@ class BlockTypeManager {
     // カスタム構造体定義
     this.structs = {};
     
-    // 標準定義のブロックタイプ
-    this.standardTypes = {
-      dialogue: {
-        label: 'セリフ',
-        description: 'キャラクターの台詞',
-        requires_text: true,
-        parameters: {
-          speaker: {
-            type: 'character_select',
-            label: '話者',
-            placeholder: 'キャラクター名',
-            default: '',
-            required: false
-          },
-          emotion: {
-            type: 'emotion_select',
-            label: '感情',
-            default: '',
-            required: false
-          }
-        }
-      },
-      monologue: {
-        label: 'モノローグ',
-        description: 'キャラクターの心の中の思考',
-        requires_text: true,
-        parameters: {
-          speaker: {
-            type: 'character_select',
-            label: '話者',
-            placeholder: 'キャラクター名',
-            default: '',
-            required: false
-          },
-          emotion: {
-            type: 'emotion_select',
-            label: '感情',
-            default: '',
-            required: false
-          }
-        }
-      },
-      narrative: {
-        label: '地の文',
-        description: '小説の地の文・説明文',
-        requires_text: true,
-        parameters: {}
-      }
-    };
+    // 列挙型定義
+    this.enums = {};
     
-    // デフォルトのブロックタイプ（標準定義を含む）
-    this.blockTypes = {
-      ...this.standardTypes,
-      command: { label: 'コマンド', requires_text: false, parameters: {} }
-    };
+    // ブロックタイプ定義（すべてYAMLファイルから読み込む）
+    this.blockTypes = {};
   }
 
   async loadSchemaFile(projectPath, schemaFileName) {
@@ -66,33 +16,24 @@ class BlockTypeManager {
       console.log("Loading schema file:", schemaFileName);
       const result = await window.electronAPI.loadSchemaFile(projectPath, schemaFileName);
       if (result.success) {
+        // enums定義を読み込み
+        this.enums = result.data.enums || {};
+        console.log('Loaded enums:', Object.keys(this.enums));
+        
         // structs定義を読み込み
         this.structs = result.data.structs || {};
         console.log('Loaded structs:', Object.keys(this.structs));
         
-        // スキーマファイルから読み込んだタイプをマージ（標準定義は常に含む）
-        const loadedTypes = result.data.block_types || {};
-        
-        // 標準定義のタイプを除外してカスタムタイプのみ取得
-        const customTypes = {};
-        Object.entries(loadedTypes).forEach(([key, value]) => {
-          if (key !== 'dialogue' && key !== 'monologue' && key !== 'narrative') {
-            customTypes[key] = value;
-          }
-        });
-        
-        // 標準定義 + カスタムタイプ
-        this.blockTypes = {
-          ...this.standardTypes,
-          ...customTypes
-        };
+        // スキーマファイルから読み込んだタイプをそのまま使用
+        this.blockTypes = result.data.block_types || {};
+        console.log('Loaded block types:', Object.keys(this.blockTypes));
       } else {
         console.error('スキーマファイルの読み込みに失敗:', result.error);
         alert(`スキーマファイル "${schemaFileName}" の読み込みに失敗しました。デフォルト設定を使用します。`);
-        // フォールバック用のデフォルト設定（標準定義を含む）
+        // フォールバック用の最小設定
         this.blockTypes = {
-          ...this.standardTypes,
-          command: { label: 'コマンド', requires_text: false, parameters: {} }
+          dialogue: { label: 'セリフ', requires_text: true, parameters: {} },
+          narrative: { label: '地の文', requires_text: true, parameters: {} }
         };
       }
     } catch (error) {
@@ -129,6 +70,19 @@ class BlockTypeManager {
   // 構造体の型がパラメータ型として有効かチェック
   isValidStructType(typeName) {
     return this.structs.hasOwnProperty(typeName);
+  }
+
+  getEnums() {
+    return this.enums;
+  }
+
+  getEnum(enumName) {
+    return this.enums[enumName];
+  }
+
+  // 列挙型がパラメータ型として有効かチェック
+  isValidEnumType(typeName) {
+    return this.enums.hasOwnProperty(typeName);
   }
 }
 

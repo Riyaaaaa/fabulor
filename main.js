@@ -552,7 +552,7 @@ ipcMain.handle('open-recent-project', async (event, projectPath) => {
 });
 
 // 全シーンをCSVとしてエクスポート
-ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, blockTypes, structs) => {
+ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, blockTypes, structs, enums) => {
   try {
     // プロジェクトファイルと同じ階層にoutputディレクトリを作成
     const projectDir = path.dirname(projectPath);
@@ -587,7 +587,7 @@ ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, bl
         }
         
         // CSVデータを生成
-        const csvData = generateCSVData(sceneParagraphs, blockTypes, structs);
+        const csvData = generateCSVData(sceneParagraphs, blockTypes, structs, enums);
         
         // ファイル名を作成（シーン名から危険な文字を除去）
         const safeSceneName = scene.name.replace(/[<>:"/\\|?*]/g, '_');
@@ -632,7 +632,7 @@ async function loadSceneData(projectPath, sceneFileName) {
 }
 
 // CSVデータを生成するヘルパー関数
-function generateCSVData(paragraphs, blockTypes, structs) {
+function generateCSVData(paragraphs, blockTypes, structs, enums) {
   // ブロックタイプを取得するヘルパー関数
   function getBlockType(typeName) {
     return blockTypes[typeName] || null;
