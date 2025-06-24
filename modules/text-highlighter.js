@@ -6,21 +6,31 @@ class TextHighlighter {
 
   // テキストエリアにメタコマンドのハイライトを適用
   highlightTextArea(textArea) {
-    if (!textArea) return;
+    if (!textArea) {
+      console.log('TextHighlighter: textArea is null');
+      return;
+    }
 
     const text = textArea.value;
+    console.log('TextHighlighter: Highlighting text:', text);
+    
     const metaTags = this.metaTagParser.parseMetaTags(text);
+    console.log('TextHighlighter: Found meta tags:', metaTags);
     
     // 既存のハイライト要素をクリア
     this.clearHighlights(textArea);
     
-    if (metaTags.length === 0) return;
+    if (metaTags.length === 0) {
+      console.log('TextHighlighter: No meta tags found');
+      return;
+    }
 
     // ハイライト用のオーバーレイ要素を作成/取得
     let overlay = this.getOrCreateOverlay(textArea);
     
     // メタタグをハイライト表示
     this.renderHighlights(overlay, text, metaTags, textArea);
+    console.log('TextHighlighter: Highlighting applied');
   }
 
   // ハイライト用のオーバーレイ要素を取得または作成
@@ -81,10 +91,11 @@ class TextHighlighter {
     overlay.style.color = 'transparent';
     overlay.style.zIndex = '1';
     
-    // テキストエリアの背景を透明にしてオーバーレイを見えるように
+    // テキストエリアの背景を半透明にしてオーバーレイを見えるように
     textArea.style.position = 'relative';
     textArea.style.zIndex = '2';
-    textArea.style.backgroundColor = 'transparent';
+    textArea.style.backgroundColor = 'rgba(50, 50, 50, 0.5)';
+    textArea.style.color = '#e0e0e0';
   }
 
   // ハイライトを描画
@@ -117,14 +128,14 @@ class TextHighlighter {
 
   // ハイライトされたメタタグのHTMLを作成
   createHighlightedTag(metaTag) {
-    const color = metaTag.color;
+    const color = metaTag.color || '#666666';
     const isError = !metaTag.isValid;
     
-    let style = `color: ${color}; font-weight: bold;`;
+    let style = `color: ${color}; font-weight: bold; background-color: rgba(0, 0, 0, 0.3); padding: 1px 2px; border-radius: 2px;`;
     
     if (isError) {
-      // エラーの場合は赤い波線を追加
-      style += ` text-decoration: underline wavy ${this.metaTagParser.settings.error_color};`;
+      // エラーの場合は赤い波線と背景色を追加
+      style += ` text-decoration: underline wavy ${this.metaTagParser.settings.error_color}; background-color: rgba(255, 0, 0, 0.1);`;
     }
     
     return `<span style="${style}" title="${this.getTooltipText(metaTag)}">${this.escapeHtml(metaTag.tag)}</span>`;

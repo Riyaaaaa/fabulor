@@ -11,6 +11,7 @@ import { HistoryManager, MoveBlockOperation, EditBlockOperation, DeleteBlockOper
 import { ResizeManager } from './modules/resize-manager.js';
 import { MetaTagParser } from './modules/meta-tag-parser.js';
 import { TextHighlighter } from './modules/text-highlighter.js';
+import { SimpleHighlighter } from './modules/simple-highlighter.js';
 
 class ScenarioManager {
   constructor() {
@@ -26,6 +27,7 @@ class ScenarioManager {
     this.resizeManager = new ResizeManager();
     this.metaTagParser = new MetaTagParser();
     this.textHighlighter = new TextHighlighter(this.metaTagParser);
+    this.simpleHighlighter = new SimpleHighlighter(this.metaTagParser);
     
     // 編集開始時の状態を保存するための変数
     this.editStartState = null;
@@ -58,14 +60,18 @@ class ScenarioManager {
     try {
       const success = await this.metaTagParser.loadMetaCommandsFromYaml('meta-commands.yaml');
       if (success) {
-        console.log('メタコマンド定義を読み込みました');
+        console.log('...メタコマンド定義の読み込み完了');
+        // グローバルフラグを設定してハイライト機能が使用可能であることを示す
+        window.metaCommandsLoaded = true;
         // すべてのテキストエリアにハイライトを適用
         this.applyHighlightToAllTextAreas();
       } else {
-        console.warn('メタコマンド定義の読み込みに失敗しました');
+        console.warn('...メタコマンド定義の読み込み失敗');
+        window.metaCommandsLoaded = false;
       }
     } catch (error) {
-      console.error('メタコマンド定義読み込みエラー:', error);
+      console.error('...メタコマンド定義読み込みエラー:', error);
+      window.metaCommandsLoaded = false;
     }
   }
 

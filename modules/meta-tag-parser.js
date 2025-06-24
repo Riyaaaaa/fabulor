@@ -21,9 +21,12 @@ class MetaTagParser {
   // YAMLファイルからメタコマンド定義を読み込み
   async loadMetaCommandsFromYaml(yamlPath) {
     try {
+      console.log('MetaTagParser: Loading YAML from:', yamlPath);
       const result = await window.electronAPI.loadYamlFile(yamlPath);
       if (result.success) {
         const data = result.data;
+        console.log('MetaTagParser: YAML data loaded:', data);
+        
         this.metaCommands = data.meta_commands || {};
         this.settings = { ...this.settings, ...(data.settings || {}) };
         
@@ -33,14 +36,15 @@ class MetaTagParser {
           this.commandColors[key] = command.color || this.settings.default_color;
         });
         
-        console.log('メタコマンド定義を読み込みました:', Object.keys(this.metaCommands));
+        console.log('MetaTagParser: メタコマンド定義を読み込みました:', Object.keys(this.metaCommands));
+        console.log('MetaTagParser: コマンド色設定:', this.commandColors);
         return true;
       } else {
-        console.error('メタコマンド定義ファイルの読み込みに失敗:', result.error);
+        console.error('MetaTagParser: メタコマンド定義ファイルの読み込みに失敗:', result.error);
         return false;
       }
     } catch (error) {
-      console.error('メタコマンド定義読み込みエラー:', error);
+      console.error('MetaTagParser: メタコマンド定義読み込みエラー:', error);
       return false;
     }
   }
@@ -49,14 +53,23 @@ class MetaTagParser {
   parseMetaTags(text) {
     const metaTags = [];
     
+    if (!text) {
+      console.log('...parseMetaTags: テキストが空');
+      return metaTags;
+    }
+    
     // 一般的なメタタグパターン [command] または [command:parameter]
     const generalPattern = /\[([a-zA-Z_][a-zA-Z0-9_]*?)(?::([^\]]+))?\]/g;
+    
+    console.log('...parseMetaTags: パターン検索開始', text);
     
     let match;
     while ((match = generalPattern.exec(text)) !== null) {
       const commandName = match[1];
       const parameter = match[2] || null;
       const isValid = this.isValidCommand(commandName, parameter);
+      
+      console.log(`...検出: [${commandName}${parameter ? ':' + parameter : ''}] - 有効: ${isValid}`);
       
       metaTags.push({
         type: commandName,
@@ -72,6 +85,7 @@ class MetaTagParser {
     // 位置順にソート
     metaTags.sort((a, b) => a.position - b.position);
     
+    console.log('...parseMetaTags: 検出完了', metaTags.length, '個');
     return metaTags;
   }
 

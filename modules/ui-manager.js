@@ -145,11 +145,20 @@ class UIManager {
       this.editorContent.placeholder = 'ここにテキストを入力...';
     }
     
-    // メタコマンドハイライトを適用（scenario-managerから呼び出し）
-    if (window.scenarioManager && window.scenarioManager.textHighlighter) {
+    // メタコマンドハイライトを適用
+    if (window.scenarioManager && window.scenarioManager.simpleHighlighter && window.metaCommandsLoaded) {
       setTimeout(() => {
-        window.scenarioManager.textHighlighter.highlightTextArea(this.editorContent);
+        console.log('...エディタコンテンツにハイライト適用');
+        window.scenarioManager.simpleHighlighter.addHighlightPreview(this.editorContent);
       }, 10);
+    } else if (window.scenarioManager && window.scenarioManager.simpleHighlighter) {
+      // メタコマンドの読み込み完了を待機
+      setTimeout(() => {
+        if (window.metaCommandsLoaded) {
+          console.log('...遅延ハイライト適用');
+          window.scenarioManager.simpleHighlighter.addHighlightPreview(this.editorContent);
+        }
+      }, 100);
     }
   }
 
