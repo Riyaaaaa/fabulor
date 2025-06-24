@@ -2,10 +2,9 @@ import { MetaTagParser } from './meta-tag-parser.js';
 
 // プレビュー管理モジュール
 class PreviewManager {
-  constructor(paragraphManager, uiManager, characterManager) {
+  constructor(paragraphManager, uiManager) {
     this.paragraphManager = paragraphManager;
     this.uiManager = uiManager;
-    this.characterManager = characterManager;
     this.metaTagParser = new MetaTagParser();
   }
 
@@ -127,12 +126,9 @@ class PreviewManager {
     return div.innerHTML;
   }
 
-  // キャラクターIDから名前を取得するヘルパーメソッド
+  // 話者名を取得するヘルパーメソッド
   getCharacterName(paragraph) {
-    if (!paragraph.speaker) return null;
-    
-    const character = this.characterManager.getCharacterById(paragraph.speaker);
-    return character ? character.name : null;
+    return paragraph.speaker || null;
   }
 
   // テキスト形式でのプレビュー内容生成

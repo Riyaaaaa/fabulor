@@ -5,7 +5,6 @@ import { ParagraphManager } from './modules/paragraph-manager.js';
 import { UIManager } from './modules/ui-manager.js';
 import { PreviewManager } from './modules/preview-manager.js';
 import { SceneManager } from './modules/scene-manager.js';
-import { CharacterManager } from './modules/character-manager.js';
 import { TextImporter } from './modules/text-importer.js';
 import { HistoryManager, MoveBlockOperation, EditBlockOperation, DeleteBlockOperation, AddBlockOperation } from './modules/history-manager.js';
 import { ResizeManager } from './modules/resize-manager.js';
@@ -18,11 +17,10 @@ class ScenarioManager {
     this.blockTypeManager = new BlockTypeManager();
     this.projectManager = new ProjectManager();
     this.sceneManager = new SceneManager();
-    this.characterManager = new CharacterManager();
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
     this.textImporter = new TextImporter(this.paragraphManager);
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager);
-    this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager, this.characterManager);
+    this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
     this.historyManager = new HistoryManager();
     this.resizeManager = new ResizeManager();
     this.metaTagParser = new MetaTagParser();
@@ -350,15 +348,6 @@ class ScenarioManager {
         alert(`スキーマファイルの読み込みに失敗しました:\n${error.message}\n\nプロジェクトは開かれましたが、スキーマファイルが正しく読み込まれませんでした。`);
       }
 
-      // キャラクターファイルをロード（プロジェクト名ベース）
-      try {
-        const projectName = projectPath.split('/').pop().replace('.fbl', '');
-        const charactersFileName = `${projectName}_characters.yaml`;
-        await this.characterManager.loadCharactersFile(projectPath, charactersFileName);
-      } catch (error) {
-        console.error('キャラクターファイル読み込みエラー:', error);
-        console.warn('キャラクターファイルの読み込みに失敗しました:', error.message);
-      }
       
       // scenesディレクトリから直接シーン一覧を取得
       try {
@@ -799,8 +788,7 @@ class ScenarioManager {
         }
         
         // セリフタイプの場合は話者名を表示（設定されている場合のみ）
-        const character = this.characterManager.getCharacterById(paragraph.speaker);
-        const characterName = character ? character.name : null;
+        const characterName = paragraph.speaker || null;
         if (paragraph.type === 'dialogue' && characterName) {
           textContent += `${characterName}：\n`;
         } else if (paragraph.type === 'monologue' && characterName) {
@@ -997,14 +985,6 @@ class ScenarioManager {
       // スキーマをリロード
       await this.blockTypeManager.loadSchemaFile(projectPath, schemaFileName);
       
-      // キャラクターファイルもリロード
-      try {
-        const projectName = projectPath.split('/').pop().replace('.fbl', '');
-        const charactersFileName = `${projectName}_characters.yaml`;
-        await this.characterManager.loadCharactersFile(projectPath, charactersFileName);
-      } catch (error) {
-        console.error('キャラクターファイル再読み込みエラー:', error);
-      }
       
       // UIを再生成
       this.uiManager.generateTypeUI();
