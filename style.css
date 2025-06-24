@@ -38,37 +38,30 @@
   text-decoration: underline wavy #ff0000;
 }
 
-/* メタコマンドプレビュー */
-.meta-command-preview {
-  background: #2d2d30;
-  border: 1px solid #3e3e42;
-  border-radius: 4px;
-  padding: 8px;
-  margin-top: 4px;
-  font-family: monospace;
-  font-size: 12px;
-  white-space: pre-wrap;
-  max-height: 100px;
-  overflow-y: auto;
+
+/* オーバーレイ用のメタコマンドスタイル */
+.meta-overlay-base {
+  font-weight: inherit;  /* フォント太さを変更しない */
+  padding: 0;            /* パディングを削除 */
+  border-radius: 2px;
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
-/* メタコマンドタイプ別の色 */
-.meta-wait { color: #4CAF50; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-pause { color: #FF9800; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-speed { color: #2196F3; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-voice { color: #9C27B0; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-bgm { color: #9C27B0; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-se { color: #9C27B0; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-shake { color: #F44336; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-fade { color: #607D8B; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-emotion { color: #E91E63; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-.meta-flag { color: #795548; font-weight: bold; background-color: rgba(255, 255, 255, 0.1); }
-
-.meta-error {
+.meta-overlay-error {
   text-decoration: underline wavy #ff0000;
   background-color: rgba(255, 0, 0, 0.1) !important;
-  font-weight: bold;
 }
+
+.meta-overlay-wait { color: #4CAF50; }
+.meta-overlay-pause { color: #FF9800; }
+.meta-overlay-speed { color: #2196F3; }
+.meta-overlay-voice { color: #9C27B0; }
+.meta-overlay-bgm { color: #9C27B0; }
+.meta-overlay-se { color: #9C27B0; }
+.meta-overlay-shake { color: #F44336; }
+.meta-overlay-fade { color: #607D8B; }
+.meta-overlay-emotion { color: #E91E63; }
+.meta-overlay-flag { color: #795548; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

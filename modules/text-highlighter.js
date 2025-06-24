@@ -17,36 +17,33 @@ class TextHighlighter {
     const metaTags = this.metaTagParser.parseMetaTags(text);
     console.log('TextHighlighter: Found meta tags:', metaTags);
     
-    // 既存のハイライト要素をクリア
-    this.clearHighlights(textArea);
-    
-    if (metaTags.length === 0) {
-      console.log('TextHighlighter: No meta tags found');
-      return;
-    }
-
     // ハイライト用のオーバーレイ要素を作成/取得
     let overlay = this.getOrCreateOverlay(textArea);
     
-    // メタタグをハイライト表示
+    // スタイルを再同期（位置ずれ防止）
+    this.syncOverlayStyles(overlay, textArea);
+    
+    // メタタグがない場合も通常テキストを表示
     this.renderHighlights(overlay, text, metaTags, textArea);
     console.log('TextHighlighter: Highlighting applied');
   }
 
   // ハイライト用のオーバーレイ要素を取得または作成
   getOrCreateOverlay(textArea) {
-    const wrapper = textArea.parentElement;
+    let wrapper = textArea.parentElement;
+    
+    // wrapperがtext-input-wrapperでない場合は作成
+    if (!wrapper.classList.contains('text-input-wrapper')) {
+      const newWrapper = document.createElement('div');
+      newWrapper.className = 'text-input-wrapper';
+      textArea.parentElement.insertBefore(newWrapper, textArea);
+      newWrapper.appendChild(textArea);
+      wrapper = newWrapper;
+    }
+    
     let overlay = wrapper.querySelector('.text-highlight-overlay');
     
     if (!overlay) {
-      // テキストエリアを相対位置のコンテナでラップ
-      if (!wrapper.classList.contains('text-input-wrapper')) {
-        const newWrapper = document.createElement('div');
-        newWrapper.className = 'text-input-wrapper';
-        textArea.parentElement.insertBefore(newWrapper, textArea);
-        newWrapper.appendChild(textArea);
-      }
-      
       // オーバーレイ要素を作成
       overlay = document.createElement('div');
       overlay.className = 'text-highlight-overlay';
@@ -55,15 +52,25 @@ class TextHighlighter {
       // テキストエリアのスタイルを同期
       this.syncOverlayStyles(overlay, textArea);
       
-      // テキストエリアのイベントリスナーを追加
-      textArea.addEventListener('input', () => {
-        this.highlightTextArea(textArea);
-      });
-      
-      textArea.addEventListener('scroll', () => {
-        overlay.scrollTop = textArea.scrollTop;
-        overlay.scrollLeft = textArea.scrollLeft;
-      });
+      // テキストエリアのイベントリスナーを追加（重複防止）
+      if (!textArea.dataset.textHighlighterAttached) {
+        textArea.addEventListener('input', () => {
+          this.highlightTextArea(textArea);
+        });
+        
+        textArea.addEventListener('scroll', () => {
+          overlay.scrollTop = textArea.scrollTop;
+          overlay.scrollLeft = textArea.scrollLeft;
+        });
+        
+        // リサイズ時の再同期
+        const resizeObserver = new ResizeObserver(() => {
+          this.syncOverlayStyles(overlay, textArea);
+        });
+        resizeObserver.observe(textArea);
+        
+        textArea.dataset.textHighlighterAttached = 'true';
+      }
     }
     
     return overlay;
@@ -76,26 +83,58 @@ class TextHighlighter {
     overlay.style.position = 'absolute';
     overlay.style.top = '0';
     overlay.style.left = '0';
-    overlay.style.width = textArea.offsetWidth + 'px';
-    overlay.style.height = textArea.offsetHeight + 'px';
-    overlay.style.padding = computedStyle.padding;
-    overlay.style.border = computedStyle.border;
+    overlay.style.right = '0';
+    overlay.style.bottom = '0';
+    
+    // テキストエリアと全く同じサイズと位置
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    
+    // パディングを正確にコピー
+    overlay.style.paddingLeft = computedStyle.paddingLeft;
+    overlay.style.paddingRight = computedStyle.paddingRight;
+    overlay.style.paddingTop = computedStyle.paddingTop;
+    overlay.style.paddingBottom = computedStyle.paddingBottom;
+    
+    // ボーダーとマージンをリセット
+    overlay.style.border = 'none';
+    overlay.style.margin = '0';
+    
+    // フォント関連を完全同期
     overlay.style.fontSize = computedStyle.fontSize;
     overlay.style.fontFamily = computedStyle.fontFamily;
+    overlay.style.fontWeight = computedStyle.fontWeight;
+    overlay.style.fontStyle = computedStyle.fontStyle;
+    overlay.style.fontVariant = computedStyle.fontVariant;
     overlay.style.lineHeight = computedStyle.lineHeight;
-    overlay.style.whiteSpace = 'pre-wrap';
-    overlay.style.wordWrap = 'break-word';
+    overlay.style.letterSpacing = computedStyle.letterSpacing;
+    overlay.style.wordSpacing = computedStyle.wordSpacing;
+    overlay.style.textIndent = computedStyle.textIndent;
+    overlay.style.textAlign = computedStyle.textAlign;
+    overlay.style.textTransform = computedStyle.textTransform;
+    overlay.style.direction = computedStyle.direction;
+    overlay.style.unicodeBidi = computedStyle.unicodeBidi;
+    
+    overlay.style.whiteSpace = computedStyle.whiteSpace;
+    overlay.style.wordWrap = computedStyle.wordWrap;
+    overlay.style.wordBreak = computedStyle.wordBreak;
+    overlay.style.overflowWrap = computedStyle.overflowWrap;
+    overlay.style.tabSize = computedStyle.tabSize;
     overlay.style.overflow = 'hidden';
     overlay.style.pointerEvents = 'none';
     overlay.style.backgroundColor = 'transparent';
-    overlay.style.color = 'transparent';
-    overlay.style.zIndex = '1';
+    overlay.style.color = '#e0e0e0';  // 通常テキストも表示
+    overlay.style.zIndex = '10';  // オーバーレイを最前面に
+    overlay.style.boxSizing = computedStyle.boxSizing;
     
-    // テキストエリアの背景を半透明にしてオーバーレイを見えるように
+    // テキストエリアの背景を透明にしてオーバーレイを見えるように
     textArea.style.position = 'relative';
-    textArea.style.zIndex = '2';
-    textArea.style.backgroundColor = 'rgba(50, 50, 50, 0.5)';
-    textArea.style.color = '#e0e0e0';
+    textArea.style.zIndex = '5';  // テキストエリアを中間層に（カーソル表示のため）
+    textArea.style.backgroundColor = 'transparent';
+    textArea.style.color = 'transparent';  // テキストを透明にしてオーバーレイのテキストのみ表示
+    textArea.style.caretColor = '#e0e0e0';  // カーソルの色を明示的に設定
+    
+    console.log('...オーバーレイスタイル同期完了');
   }
 
   // ハイライトを描画
@@ -103,24 +142,29 @@ class TextHighlighter {
     let html = '';
     let lastIndex = 0;
     
-    metaTags.forEach(metaTag => {
-      // メタタグ前のテキスト
-      if (metaTag.position > lastIndex) {
-        const beforeText = text.substring(lastIndex, metaTag.position);
-        html += this.escapeHtml(beforeText);
+    if (metaTags.length === 0) {
+      // メタタグがない場合は全テキストをそのまま表示
+      html = this.escapeHtml(text);
+    } else {
+      metaTags.forEach(metaTag => {
+        // メタタグ前のテキスト
+        if (metaTag.position > lastIndex) {
+          const beforeText = text.substring(lastIndex, metaTag.position);
+          html += this.escapeHtml(beforeText);
+        }
+        
+        // メタタグ自体をハイライト
+        const tagHtml = this.createHighlightedTag(metaTag);
+        html += tagHtml;
+        
+        lastIndex = metaTag.position + metaTag.length;
+      });
+      
+      // 最後のメタタグ以降のテキスト
+      if (lastIndex < text.length) {
+        const remainingText = text.substring(lastIndex);
+        html += this.escapeHtml(remainingText);
       }
-      
-      // メタタグ自体をハイライト
-      const tagHtml = this.createHighlightedTag(metaTag);
-      html += tagHtml;
-      
-      lastIndex = metaTag.position + metaTag.length;
-    });
-    
-    // 最後のメタタグ以降のテキスト
-    if (lastIndex < text.length) {
-      const remainingText = text.substring(lastIndex);
-      html += this.escapeHtml(remainingText);
     }
     
     overlay.innerHTML = html;
@@ -128,17 +172,17 @@ class TextHighlighter {
 
   // ハイライトされたメタタグのHTMLを作成
   createHighlightedTag(metaTag) {
-    const color = metaTag.color || '#666666';
     const isError = !metaTag.isValid;
-    
-    let style = `color: ${color}; font-weight: bold; background-color: rgba(0, 0, 0, 0.3); padding: 1px 2px; border-radius: 2px;`;
+    let className = 'meta-overlay-base';
     
     if (isError) {
-      // エラーの場合は赤い波線と背景色を追加
-      style += ` text-decoration: underline wavy ${this.metaTagParser.settings.error_color}; background-color: rgba(255, 0, 0, 0.1);`;
+      className += ' meta-overlay-error';
+    } else {
+      className += ` meta-overlay-${metaTag.type}`;
     }
     
-    return `<span style="${style}" title="${this.getTooltipText(metaTag)}">${this.escapeHtml(metaTag.tag)}</span>`;
+    // 文字幅を変更しないよう、余分な装飾は最小限に
+    return `<span class="${className}">${this.escapeHtml(metaTag.tag)}</span>`;
   }
 
   // ツールチップテキストを生成

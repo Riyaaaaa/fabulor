@@ -146,17 +146,21 @@ class UIManager {
     }
     
     // メタコマンドハイライトを適用
-    if (window.scenarioManager && window.scenarioManager.simpleHighlighter && window.metaCommandsLoaded) {
+    if (window.scenarioManager && window.metaCommandsLoaded) {
       setTimeout(() => {
         console.log('...エディタコンテンツにハイライト適用');
-        window.scenarioManager.simpleHighlighter.addHighlightPreview(this.editorContent);
+        if (window.scenarioManager.textHighlighter) {
+          window.scenarioManager.textHighlighter.highlightTextArea(this.editorContent);
+        }
       }, 10);
-    } else if (window.scenarioManager && window.scenarioManager.simpleHighlighter) {
+    } else if (window.scenarioManager) {
       // メタコマンドの読み込み完了を待機
       setTimeout(() => {
         if (window.metaCommandsLoaded) {
           console.log('...遅延ハイライト適用');
-          window.scenarioManager.simpleHighlighter.addHighlightPreview(this.editorContent);
+          if (window.scenarioManager.textHighlighter) {
+            window.scenarioManager.textHighlighter.highlightTextArea(this.editorContent);
+          }
         }
       }, 100);
     }

@@ -11,7 +11,6 @@ import { HistoryManager, MoveBlockOperation, EditBlockOperation, DeleteBlockOper
 import { ResizeManager } from './modules/resize-manager.js';
 import { MetaTagParser } from './modules/meta-tag-parser.js';
 import { TextHighlighter } from './modules/text-highlighter.js';
-import { SimpleHighlighter } from './modules/simple-highlighter.js';
 
 class ScenarioManager {
   constructor() {
@@ -27,7 +26,6 @@ class ScenarioManager {
     this.resizeManager = new ResizeManager();
     this.metaTagParser = new MetaTagParser();
     this.textHighlighter = new TextHighlighter(this.metaTagParser);
-    this.simpleHighlighter = new SimpleHighlighter(this.metaTagParser);
     
     // 編集開始時の状態を保存するための変数
     this.editStartState = null;
