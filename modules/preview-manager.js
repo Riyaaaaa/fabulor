@@ -1,9 +1,12 @@
+import { MetaTagParser } from './meta-tag-parser.js';
+
 // プレビュー管理モジュール
 class PreviewManager {
   constructor(paragraphManager, uiManager, characterManager) {
     this.paragraphManager = paragraphManager;
     this.uiManager = uiManager;
     this.characterManager = characterManager;
+    this.metaTagParser = new MetaTagParser();
   }
 
   showPreview() {
@@ -59,8 +62,9 @@ class PreviewManager {
         paragraphDiv.classList.add('monologue');
       }
       
-      // 改行を<br>タグに変換してHTMLとして設定（HTMLエスケープも行う）
-      const escapedText = this.escapeHtml(paragraph.text);
+      // メタタグを除去してからHTMLエスケープ
+      const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
+      const escapedText = this.escapeHtml(textWithoutMetaTags);
       // 末尾の改行や空行を除去してから<br>タグに変換
       const trimmedText = escapedText.replace(/[\n\r\s]*$/, '');
       const textWithBreaks = trimmedText.replace(/\n/g, '<br>');
@@ -102,8 +106,9 @@ class PreviewManager {
       
       const textDiv = document.createElement('div');
       textDiv.className = 'text';
-      // 改行を<br>タグに変換してHTMLとして設定（HTMLエスケープも行う）
-      const escapedText = this.escapeHtml(paragraph.text);
+      // メタタグを除去してからHTMLエスケープ
+      const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
+      const escapedText = this.escapeHtml(textWithoutMetaTags);
       // 末尾の改行や空行を除去してから<br>タグに変換
       const trimmedText = escapedText.replace(/[\n\r\s]*$/, '');
       const textWithBreaks = trimmedText.replace(/\n/g, '<br>');
@@ -143,17 +148,20 @@ class PreviewManager {
         
         // セリフタイプのブロックは話者の有無に関わらず鍵カッコを表示
         if (paragraph.type === 'dialogue') {
-          // 末尾の改行や空行を除去
-          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          // メタタグを除去してから末尾の改行や空行を除去
+          const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
+          const trimmedText = textWithoutMetaTags.replace(/[\n\r\s]*$/, '');
           textContent += `「${trimmedText}」\n\n`;
         } else if (paragraph.type === 'monologue') {
           // モノローグは（）で囲む
-          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
+          const trimmedText = textWithoutMetaTags.replace(/[\n\r\s]*$/, '');
           textContent += `（${trimmedText}）\n\n`;
         } else {
           // 地の文など
-          // 末尾の改行や空行を除去
-          const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+          // メタタグを除去してから末尾の改行や空行を除去
+          const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
+          const trimmedText = textWithoutMetaTags.replace(/[\n\r\s]*$/, '');
           textContent += `${trimmedText}\n\n`;
         }
       });
@@ -174,8 +182,9 @@ class PreviewManager {
           textContent += `${characterName}（心の声）：\n`;
         }
         
-        // 末尾の改行や空行を除去
-        const trimmedText = paragraph.text.replace(/[\n\r\s]*$/, '');
+        // メタタグを除去してから末尾の改行や空行を除去
+        const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
+        const trimmedText = textWithoutMetaTags.replace(/[\n\r\s]*$/, '');
         
         // セリフの場合は台本形式では鍵カッコなし、地の文の場合はそのまま
         if (paragraph.type === 'dialogue') {
