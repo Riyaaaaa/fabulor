@@ -606,12 +606,14 @@ function generateCSVData(paragraphs, blockTypes, structs, enums) {
     const blockType = getBlockType(paragraph.type);
     let argCount = 0;
     
-    if (blockType && blockType.parameters) {
-      argCount += Object.keys(blockType.parameters).length;
-    }
-    
+    // テキストがある場合は+1
     if (blockType && blockType.requires_text) {
       argCount += 1;
+    }
+    
+    // パラメータ数を追加
+    if (blockType && blockType.parameters) {
+      argCount += Object.keys(blockType.parameters).length;
     }
     
     maxArgs = Math.max(maxArgs, argCount);
@@ -635,9 +637,13 @@ function generateCSVData(paragraphs, blockTypes, structs, enums) {
     const tags = Array.isArray(paragraph.tags) ? paragraph.tags.join(',') : '';
     row.push(escapeCSVValue(tags));
     
-    // Args
+    // Args（テキスト + パラメータ）を順番に追加
     const blockType = getBlockType(paragraph.type);
-    let argIndex = 0;
+    
+    // テキストがある場合は最初のArgとして追加
+    if (blockType && blockType.requires_text) {
+      row.push(escapeCSVValue(paragraph.text || ''));
+    }
     
     // パラメータを追加
     if (blockType && blockType.parameters) {
@@ -653,20 +659,12 @@ function generateCSVData(paragraphs, blockTypes, structs, enums) {
         } else {
           row.push(escapeCSVValue(value));
         }
-        argIndex++;
       });
     }
     
-    // テキストを追加（requires_textがtrueの場合）
-    if (blockType && blockType.requires_text) {
-      row.push(escapeCSVValue(paragraph.text || ''));
-      argIndex++;
-    }
-    
     // 残りの列を空文字で埋める
-    while (argIndex < maxArgs) {
+    while (row.length < headers.length) {
       row.push('');
-      argIndex++;
     }
     
     rows.push(row);

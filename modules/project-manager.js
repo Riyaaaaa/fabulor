@@ -175,14 +175,14 @@ class ProjectManager {
       const blockType = blockTypeManager.getBlockType(paragraph.type);
       let argCount = 0;
       
-      // パラメータの数をカウント
-      if (blockType && blockType.parameters) {
-        argCount = Object.keys(blockType.parameters).length;
+      // テキストがある場合は+1
+      if (blockType && blockType.requires_text) {
+        argCount += 1;
       }
       
-      // テキストがある場合は+1
-      if (blockType && blockType.requires_text && paragraph.text) {
-        argCount += 1;
+      // パラメータ数を追加
+      if (blockType && blockType.parameters) {
+        argCount += Object.keys(blockType.parameters).length;
       }
       
       maxArgs = Math.max(maxArgs, argCount);
@@ -207,10 +207,14 @@ class ProjectManager {
       // Tag
       row.push(this.escapeCSV(paragraph.tags.join(',')));
       
-      // Args
-      const args = [];
+      // Args（テキスト + パラメータ）を順番に追加
       
-      // パラメータを順番に追加
+      // テキストがある場合は最初のArgとして追加
+      if (blockType && blockType.requires_text) {
+        row.push(this.escapeCSV(paragraph.text || ''));
+      }
+      
+      // パラメータを追加
       if (blockType && blockType.parameters) {
         Object.keys(blockType.parameters).forEach(paramKey => {
           const paramDef = blockType.parameters[paramKey];
@@ -219,24 +223,19 @@ class ProjectManager {
           // struct型の場合は特別な形式で出力
           if (paramDef.type && blockTypeManager.isValidStructType(paramDef.type)) {
             const structValue = this.formatStructForCSV(value, paramDef.type, blockTypeManager);
-            args.push(this.escapeCSV(structValue));
+            row.push(this.escapeCSV(structValue));
           } else {
-            args.push(this.escapeCSV(value.toString()));
+            row.push(this.escapeCSV(value.toString()));
           }
         });
       }
       
-      // テキストを最後に追加
-      if (blockType && blockType.requires_text && paragraph.text) {
-        args.push(this.escapeCSV(paragraph.text));
+      // 残りの列を空文字で埋める
+      while (row.length < headers.length) {
+        row.push('');
       }
       
-      // 残りのArgを空文字で埋める
-      while (args.length < maxArgs) {
-        args.push('');
-      }
-      
-      rows.push([...row, ...args]);
+      rows.push(row);
     });
     
     // CSV文字列に変換
