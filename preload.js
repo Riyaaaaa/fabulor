@@ -19,7 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportAllScenesAsCSV: (projectPath, scenes, blockTypes) => ipcRenderer.invoke('export-all-scenes-as-csv', projectPath, scenes, blockTypes),
   exportText: (textContent, format) => ipcRenderer.invoke('export-text', textContent, format),
   exportAllScenesAsText: (projectPath, sceneTexts, format) => ipcRenderer.invoke('export-all-scenes-as-text', projectPath, sceneTexts, format),
-  loadYamlFile: (yamlPath) => ipcRenderer.invoke('load-yaml-file', yamlPath)
+  loadYamlFile: (yamlPath) => ipcRenderer.invoke('load-yaml-file', yamlPath),
+  scanMigrationDirectory: (projectPath) => ipcRenderer.invoke('scan-migration-directory', projectPath),
+  executeMigration: (projectPath, migrationFileName, blocks) => ipcRenderer.invoke('execute-migration', projectPath, migrationFileName, blocks)
 });
 
 window.addEventListener('DOMContentLoaded', () => {

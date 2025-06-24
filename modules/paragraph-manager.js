@@ -194,6 +194,18 @@ class ParagraphManager {
     return this.paragraphs[currentIndex + 1];
   }
   
+  // 全ブロックをクリア
+  clearAllParagraphs() {
+    this.paragraphs = [];
+    this.selectedParagraphId = null;
+  }
+
+  // 既存データでブロックを追加
+  addParagraphWithData(paragraphData) {
+    this.paragraphs.push(paragraphData);
+    return paragraphData;
+  }
+
   selectPreviousParagraph() {
     if (this.paragraphs.length === 0) return null;
     

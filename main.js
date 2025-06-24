@@ -799,6 +799,102 @@ ipcMain.handle('export-all-scenes-as-text', async (event, projectPath, sceneText
   }
 });
 
+// マイグレーションディレクトリスキャンハンドラー
+ipcMain.handle('scan-migration-directory', async (event, projectPath) => {
+  try {
+    const projectDir = path.dirname(projectPath);
+    const migrationDir = path.join(projectDir, 'migration');
+    
+    console.log('マイグレーションディレクトリスキャン:', migrationDir);
+    
+    // migrationディレクトリの存在確認
+    try {
+      await fs.access(migrationDir);
+    } catch (error) {
+      return { success: false, error: 'migrationディレクトリが見つかりません' };
+    }
+    
+    // .jsファイルを検索
+    const files = await fs.readdir(migrationDir);
+    const jsFiles = files.filter(file => file.endsWith('.js'));
+    
+    const migrations = [];
+    
+    for (const file of jsFiles) {
+      try {
+        const filePath = path.join(migrationDir, file);
+        const content = await fs.readFile(filePath, 'utf8');
+        
+        // ファイル内容から名前と説明を抽出（コメント形式）
+        const nameMatch = content.match(/\/\*\s*@name\s+(.+?)\s*\*\//);
+        const descMatch = content.match(/\/\*\s*@description\s+(.+?)\s*\*\//);
+        
+        migrations.push({
+          fileName: file,
+          name: nameMatch ? nameMatch[1] : file.replace('.js', ''),
+          description: descMatch ? descMatch[1] : null,
+          filePath: filePath
+        });
+      } catch (error) {
+        console.error(`マイグレーションファイル読み込みエラー ${file}:`, error);
+      }
+    }
+    
+    return { success: true, migrations: migrations };
+  } catch (error) {
+    console.error('マイグレーションディレクトリスキャンエラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// マイグレーション実行ハンドラー
+ipcMain.handle('execute-migration', async (event, projectPath, migrationFileName, blocks) => {
+  try {
+    const projectDir = path.dirname(projectPath);
+    const migrationPath = path.join(projectDir, 'migration', migrationFileName);
+    
+    console.log('マイグレーション実行:', migrationPath);
+    
+    // ファイルの存在確認
+    try {
+      await fs.access(migrationPath);
+    } catch (error) {
+      return { success: false, error: `マイグレーションファイルが見つかりません: ${migrationFileName}` };
+    }
+    
+    // マイグレーションスクリプトを動的に読み込み
+    delete require.cache[require.resolve(migrationPath)]; // キャッシュをクリア
+    const migrationModule = require(migrationPath);
+    
+    if (typeof migrationModule.migrate !== 'function') {
+      return { success: false, error: 'マイグレーションファイルにmigrate関数が見つかりません' };
+    }
+    
+    // 各ブロックにマイグレーションを適用
+    const migratedBlocks = [];
+    
+    for (let i = 0; i < blocks.length; i++) {
+      try {
+        const result = migrationModule.migrate(blocks[i]);
+        if (result) {
+          migratedBlocks.push(result);
+        } else {
+          console.warn(`ブロック ${i} のマイグレーション結果がnullです`);
+          migratedBlocks.push(blocks[i]); // 元のブロックを保持
+        }
+      } catch (error) {
+        console.error(`ブロック ${i} のマイグレーション実行エラー:`, error);
+        return { success: false, error: `ブロック ${i} の処理中にエラーが発生しました: ${error.message}` };
+      }
+    }
+    
+    return { success: true, migratedBlocks: migratedBlocks };
+  } catch (error) {
+    console.error('マイグレーション実行エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // YAMLファイル読み込みハンドラー
 ipcMain.handle('load-yaml-file', async (event, yamlPath) => {
   try {

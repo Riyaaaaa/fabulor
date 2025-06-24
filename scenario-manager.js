@@ -11,6 +11,7 @@ import { HistoryManager, MoveBlockOperation, EditBlockOperation, DeleteBlockOper
 import { ResizeManager } from './modules/resize-manager.js';
 import { MetaTagParser } from './modules/meta-tag-parser.js';
 import { TextHighlighter } from './modules/text-highlighter.js';
+import { MigrationManager } from './modules/migration-manager.js';
 
 class ScenarioManager {
   constructor() {
@@ -26,6 +27,7 @@ class ScenarioManager {
     this.resizeManager = new ResizeManager();
     this.metaTagParser = new MetaTagParser();
     this.textHighlighter = new TextHighlighter(this.metaTagParser);
+    this.migrationManager = new MigrationManager(this.paragraphManager, this.uiManager);
     
     // 編集開始時の状態を保存するための変数
     this.editStartState = null;
@@ -91,6 +93,89 @@ class ScenarioManager {
     }
   }
 
+  // マイグレーションモーダルを表示
+  async showMigrationModal() {
+    console.log('...マイグレーションモーダル表示開始');
+    
+    if (!this.projectManager.getProjectPath()) {
+      alert('プロジェクトが開かれていません');
+      return;
+    }
+
+    // マイグレーションスクリプト一覧を読み込み
+    const migrations = await this.migrationManager.loadAvailableMigrations(this.projectManager.getProjectPath());
+    console.log('...マイグレーション読み込み結果:', migrations);
+    
+    if (migrations.length === 0) {
+      alert('migrationディレクトリにマイグレーションスクリプトが見つかりません');
+      return;
+    }
+
+    console.log('...マイグレーションモーダルを表示');
+    this.migrationManager.showMigrationModal();
+  }
+
+  // マイグレーション選択変更時
+  onMigrationSelectChange() {
+    const select = document.getElementById('migration-select');
+    const executeButton = document.getElementById('execute-migration');
+    const infoDiv = document.getElementById('migration-info');
+    const descriptionP = document.getElementById('migration-description');
+
+    if (select.value) {
+      executeButton.disabled = false;
+      
+      // 選択されたマイグレーションの詳細を表示
+      const selectedMigration = this.migrationManager.getAvailableMigrations()
+        .find(m => m.fileName === select.value);
+      
+      if (selectedMigration) {
+        descriptionP.textContent = selectedMigration.description || '説明なし';
+        infoDiv.style.display = 'block';
+      }
+    } else {
+      executeButton.disabled = true;
+      infoDiv.style.display = 'none';
+    }
+  }
+
+  // マイグレーション実行
+  async executeMigration() {
+    const select = document.getElementById('migration-select');
+    const migrationFileName = select.value;
+    
+    if (!migrationFileName) {
+      alert('マイグレーションスクリプトを選択してください');
+      return;
+    }
+
+    // 確認ダイアログ
+    const confirmed = confirm(`マイグレーション "${migrationFileName}" を実行しますか？\n\n現在のブロックデータが置き換えられます。事前に保存することを推奨します。`);
+    if (!confirmed) {
+      return;
+    }
+
+    console.log('...マイグレーション実行開始:', migrationFileName);
+
+    try {
+      const result = await this.migrationManager.executeMigration(
+        this.projectManager.getProjectPath(),
+        migrationFileName
+      );
+
+      if (result.success) {
+        this.markAsChanged();
+        this.migrationManager.closeMigrationModal();
+        alert(result.message);
+      } else {
+        alert(`マイグレーション実行エラー: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('...マイグレーション実行エラー:', error);
+      alert(`マイグレーション実行中にエラーが発生しました: ${error.message}`);
+    }
+  }
+
   bindEvents() {
     document.getElementById('add-paragraph').addEventListener('click', () => this.addParagraph());
     document.getElementById('delete-paragraph').addEventListener('click', () => this.deleteParagraph());
@@ -101,6 +186,11 @@ class ScenarioManager {
     document.getElementById('export-text').addEventListener('click', () => this.exportText());
     document.getElementById('preview-novel').addEventListener('click', () => this.previewManager.showPreview());
     document.getElementById('reload-schema').addEventListener('click', () => this.reloadSchema());
+    document.getElementById('migration').addEventListener('click', () => this.showMigrationModal());
+    document.getElementById('close-migration').addEventListener('click', () => this.migrationManager.closeMigrationModal());
+    document.getElementById('cancel-migration').addEventListener('click', () => this.migrationManager.closeMigrationModal());
+    document.getElementById('execute-migration').addEventListener('click', () => this.executeMigration());
+    document.getElementById('migration-select').addEventListener('change', () => this.onMigrationSelectChange());
     document.getElementById('add-scene').addEventListener('click', () => this.addScene());
     document.getElementById('import-text').addEventListener('click', () => this.importTextAsScene());
     document.getElementById('new-project-from-recent').addEventListener('click', () => this.newProject());
@@ -1138,6 +1228,7 @@ class ScenarioManager {
       'export-text',
       'preview-novel',
       'reload-schema',
+      'migration',
       'add-scene',
       'import-text'
     ];

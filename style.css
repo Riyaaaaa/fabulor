@@ -63,6 +63,85 @@
 .meta-overlay-emotion { color: #E91E63; }
 .meta-overlay-flag { color: #795548; }
 
+/* マイグレーションモーダルのスタイル */
+.migration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.migration-form label {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.migration-form select {
+  padding: 0.5rem;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  background-color: #2d2d30;
+  color: #e0e0e0;
+  font-size: 1rem;
+}
+
+.migration-info {
+  background-color: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.migration-info h3 {
+  margin-top: 0;
+  color: #ffffff;
+}
+
+.migration-warning {
+  color: #ffcc00;
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+.migration-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.migration-execute-button {
+  background-color: #0e639c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.migration-execute-button:hover:not(:disabled) {
+  background-color: #1177bb;
+}
+
+.migration-execute-button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.migration-cancel-button {
+  background-color: #666;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.migration-cancel-button:hover {
+  background-color: #888;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #1e1e1e;
