@@ -144,6 +144,13 @@ class UIManager {
       this.editorContent.disabled = false;
       this.editorContent.placeholder = 'ここにテキストを入力...';
     }
+    
+    // メタコマンドハイライトを適用（scenario-managerから呼び出し）
+    if (window.scenarioManager && window.scenarioManager.textHighlighter) {
+      setTimeout(() => {
+        window.scenarioManager.textHighlighter.highlightTextArea(this.editorContent);
+      }, 10);
+    }
   }
 
   showPlaceholder() {

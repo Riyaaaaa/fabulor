@@ -7,44 +7,65 @@ class MetaTagParser {
       pause: /\[pause:(\d+)\]/g,
       speed: /\[speed:(slow|normal|fast)\]/g
     };
+    
+    // YAMLから読み込むメタコマンド定義
+    this.metaCommands = {};
+    this.commandColors = {};
+    this.settings = {
+      default_color: "#666666",
+      error_color: "#FF0000",
+      error_underline: true
+    };
+  }
+
+  // YAMLファイルからメタコマンド定義を読み込み
+  async loadMetaCommandsFromYaml(yamlPath) {
+    try {
+      const result = await window.electronAPI.loadYamlFile(yamlPath);
+      if (result.success) {
+        const data = result.data;
+        this.metaCommands = data.meta_commands || {};
+        this.settings = { ...this.settings, ...(data.settings || {}) };
+        
+        // コマンドの色情報を抽出
+        this.commandColors = {};
+        Object.entries(this.metaCommands).forEach(([key, command]) => {
+          this.commandColors[key] = command.color || this.settings.default_color;
+        });
+        
+        console.log('メタコマンド定義を読み込みました:', Object.keys(this.metaCommands));
+        return true;
+      } else {
+        console.error('メタコマンド定義ファイルの読み込みに失敗:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('メタコマンド定義読み込みエラー:', error);
+      return false;
+    }
   }
 
   // テキストからすべてのメタタグを検出
   parseMetaTags(text) {
     const metaTags = [];
     
-    // [wait]タグを検出
+    // 一般的なメタタグパターン [command] または [command:parameter]
+    const generalPattern = /\[([a-zA-Z_][a-zA-Z0-9_]*?)(?::([^\]]+))?\]/g;
+    
     let match;
-    while ((match = this.patterns.wait.exec(text)) !== null) {
+    while ((match = generalPattern.exec(text)) !== null) {
+      const commandName = match[1];
+      const parameter = match[2] || null;
+      const isValid = this.isValidCommand(commandName, parameter);
+      
       metaTags.push({
-        type: 'wait',
-        position: match.index,
-        length: match[0].length,
-        tag: match[0]
-      });
-    }
-    
-    // [pause:ミリ秒]タグを検出
-    this.patterns.pause.lastIndex = 0; // RegExpのlastIndexをリセット
-    while ((match = this.patterns.pause.exec(text)) !== null) {
-      metaTags.push({
-        type: 'pause',
+        type: commandName,
         position: match.index,
         length: match[0].length,
         tag: match[0],
-        duration: parseInt(match[1], 10)
-      });
-    }
-    
-    // [speed:速度]タグを検出
-    this.patterns.speed.lastIndex = 0; // RegExpのlastIndexをリセット
-    while ((match = this.patterns.speed.exec(text)) !== null) {
-      metaTags.push({
-        type: 'speed',
-        position: match.index,
-        length: match[0].length,
-        tag: match[0],
-        speed: match[1]
+        parameter: parameter,
+        isValid: isValid,
+        color: this.getCommandColor(commandName, isValid)
       });
     }
     
@@ -52,6 +73,49 @@ class MetaTagParser {
     metaTags.sort((a, b) => a.position - b.position);
     
     return metaTags;
+  }
+
+  // コマンドの妥当性チェック
+  isValidCommand(commandName, parameter) {
+    if (!this.metaCommands[commandName]) {
+      return false;
+    }
+    
+    const command = this.metaCommands[commandName];
+    
+    // パラメータが必要なコマンドの場合
+    if (command.parameters && command.parameters.length > 0) {
+      if (!parameter) {
+        return false;
+      }
+      
+      // パラメータの妥当性チェック
+      const param = command.parameters[0]; // 簡略化：最初のパラメータのみチェック
+      
+      if (param.type === 'number') {
+        const num = parseInt(parameter, 10);
+        if (isNaN(num)) return false;
+        if (param.min !== undefined && num < param.min) return false;
+        if (param.max !== undefined && num > param.max) return false;
+      } else if (param.type === 'enum') {
+        if (!param.values.includes(parameter)) return false;
+      }
+    } else {
+      // パラメータが不要なコマンドにパラメータがある場合
+      if (parameter) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // コマンドの色を取得
+  getCommandColor(commandName, isValid) {
+    if (!isValid) {
+      return this.settings.error_color;
+    }
+    return this.commandColors[commandName] || this.settings.default_color;
   }
 
   // テキストからメタタグを除去

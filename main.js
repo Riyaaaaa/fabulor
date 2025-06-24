@@ -799,6 +799,28 @@ ipcMain.handle('export-all-scenes-as-text', async (event, projectPath, sceneText
   }
 });
 
+// YAMLファイル読み込みハンドラー
+ipcMain.handle('load-yaml-file', async (event, yamlPath) => {
+  try {
+    console.log('YAML読み込み開始:', yamlPath);
+    
+    // 相対パスの場合は絶対パスに変換
+    let fullPath = yamlPath;
+    if (!path.isAbsolute(yamlPath)) {
+      fullPath = path.join(__dirname, yamlPath);
+    }
+    
+    const yamlContent = await fs.readFile(fullPath, 'utf8');
+    const data = yaml.load(yamlContent);
+    
+    console.log('YAML読み込み成功:', fullPath);
+    return { success: true, data: data };
+  } catch (error) {
+    console.error('YAML読み込みエラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // アプリケーションイベント処理
 app.whenReady().then(async () => {
   await loadRecentProjects();

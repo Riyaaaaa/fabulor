@@ -9,6 +9,8 @@ import { CharacterManager } from './modules/character-manager.js';
 import { TextImporter } from './modules/text-importer.js';
 import { HistoryManager, MoveBlockOperation, EditBlockOperation, DeleteBlockOperation, AddBlockOperation } from './modules/history-manager.js';
 import { ResizeManager } from './modules/resize-manager.js';
+import { MetaTagParser } from './modules/meta-tag-parser.js';
+import { TextHighlighter } from './modules/text-highlighter.js';
 
 class ScenarioManager {
   constructor() {
@@ -22,6 +24,8 @@ class ScenarioManager {
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager, this.characterManager);
     this.historyManager = new HistoryManager();
     this.resizeManager = new ResizeManager();
+    this.metaTagParser = new MetaTagParser();
+    this.textHighlighter = new TextHighlighter(this.metaTagParser);
     
     // 編集開始時の状態を保存するための変数
     this.editStartState = null;
@@ -45,6 +49,42 @@ class ScenarioManager {
     this.setEditingEnabled(false);
     // 最近のプロジェクト一覧を表示
     await this.showRecentProjects();
+    
+    // メタコマンド定義を読み込み
+    await this.loadMetaCommands();
+  }
+
+  async loadMetaCommands() {
+    try {
+      const success = await this.metaTagParser.loadMetaCommandsFromYaml('meta-commands.yaml');
+      if (success) {
+        console.log('メタコマンド定義を読み込みました');
+        // すべてのテキストエリアにハイライトを適用
+        this.applyHighlightToAllTextAreas();
+      } else {
+        console.warn('メタコマンド定義の読み込みに失敗しました');
+      }
+    } catch (error) {
+      console.error('メタコマンド定義読み込みエラー:', error);
+    }
+  }
+
+  applyHighlightToAllTextAreas() {
+    // 現在表示されているすべてのテキストエリアにハイライトを適用
+    const textAreas = document.querySelectorAll('textarea');
+    textAreas.forEach(textarea => {
+      if (textarea.id === 'editor-content') {
+        this.textHighlighter.highlightTextArea(textarea);
+      }
+    });
+  }
+
+  setupTextHighlightForNewParagraphs() {
+    // 新しく追加されたテキストエリアにハイライト機能を適用
+    const editorContent = document.getElementById('editor-content');
+    if (editorContent) {
+      this.textHighlighter.highlightTextArea(editorContent);
+    }
   }
 
   bindEvents() {

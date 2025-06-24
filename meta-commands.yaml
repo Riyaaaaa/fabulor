@@ -1,0 +1,56 @@
+# メタコマンド定義ファイル
+# このファイルでノベルランタイムで使用可能なメタコマンドを定義します
+
+meta_commands:
+  # 基本的な制御コマンド
+  wait:
+    description: "段落の途中でユーザー入力を待機"
+    syntax: "[wait]"
+    color: "#4CAF50"  # 緑色
+    
+  pause:
+    description: "指定時間の自動待機"
+    syntax: "[pause:ミリ秒]"
+    parameters:
+      - name: "duration"
+        type: "number"
+        description: "待機時間（ミリ秒）"
+        min: 0
+        max: 10000
+    color: "#FF9800"  # オレンジ色
+    
+  # テキスト表示制御
+  speed:
+    description: "テキスト表示速度の変更"
+    syntax: "[speed:速度]"
+    parameters:
+      - name: "speed"
+        type: "enum"
+        description: "表示速度"
+        values: ["slow", "normal", "fast"]
+    color: "#2196F3"  # 青色
+    
+  # 音声制御
+  voice:
+    description: "音声再生"
+    syntax: "[voice:ファイル名]"
+    parameters:
+      - name: "filename"
+        type: "string"
+        description: "音声ファイル名"
+    color: "#9C27B0"  # 紫色
+
+  se:
+    description: "効果音再生"
+    syntax: "[se:ファイル名]"
+    parameters:
+      - name: "filename"
+        type: "string"
+        description: "効果音ファイル名"
+    color: "#9C27B0"  # 紫色
+    
+# 設定
+settings:
+  default_color: "#666666"  # 未定義コマンドのデフォルト色
+  error_color: "#FF0000"    # エラー時の色
+  error_underline: true     # エラー時の波線表示
