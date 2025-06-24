@@ -17,12 +17,14 @@ class PreviewManager {
     }
     
     const previewModal = this.uiManager.getPreviewModal();
+    previewModal.style.display = 'flex';  // style属性を直接設定
     previewModal.classList.add('show');
     this.updatePreview();
   }
 
   closePreview() {
     const previewModal = this.uiManager.getPreviewModal();
+    previewModal.style.display = 'none';  // style属性を直接設定
     previewModal.classList.remove('show');
   }
   
