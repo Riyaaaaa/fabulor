@@ -654,7 +654,7 @@ class UIManager {
     enumDef.fields.forEach(field => {
       const optionElement = document.createElement('option');
       optionElement.value = field.name;
-      optionElement.textContent = field.label;
+      optionElement.textContent = field.label || field.name;
       selectElement.appendChild(optionElement);
     });
 
