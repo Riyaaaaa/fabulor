@@ -105,6 +105,14 @@ class UIManager {
             emptyOption.value = '';
             emptyOption.textContent = 'なし';
             inputElement.appendChild(emptyOption);
+          } else if (this.blockTypeManager.isValidStructType(paramDef.type)) {
+            // struct型の場合は複合入力UI要素を作成
+            inputElement = this.createStructInputElement(paramDef.type, typeKey, paramKey);
+          } else {
+            // 未知の型の場合はテキスト入力として扱う
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.placeholder = `未対応の型: ${paramDef.type}`;
           }
 
           inputElement.id = `${typeKey}-${paramKey}`;
@@ -183,7 +191,12 @@ class UIManager {
     
     Object.entries(this.typeParams[type]).forEach(([key, element]) => {
       if (element && paragraph[key] !== undefined) {
-        element.value = paragraph[key];
+        // struct型かどうかを判定
+        if (element.classList && element.classList.contains('struct-container')) {
+          this.setStructValue(element, paragraph[key]);
+        } else {
+          element.value = paragraph[key];
+        }
       }
     });
   }
@@ -570,6 +583,152 @@ class UIManager {
     if (emotionSelect) {
       this.updateEmotionSelect(characterId, emotionSelect);
     }
+  }
+
+  // struct型のパラメータ用UI要素を作成
+  createStructInputElement(structType, typeKey, paramKey) {
+    const structDef = this.blockTypeManager.getStruct(structType);
+    if (!structDef || !structDef.properties) {
+      console.error(`Struct definition not found: ${structType}`);
+      const errorElement = document.createElement('div');
+      errorElement.textContent = `Struct "${structType}" が見つかりません`;
+      errorElement.style.color = 'red';
+      return errorElement;
+    }
+
+    // struct全体を包むコンテナ
+    const structContainer = document.createElement('div');
+    structContainer.className = 'struct-container';
+    structContainer.style.border = '1px solid #ccc';
+    structContainer.style.padding = '10px';
+    structContainer.style.margin = '5px 0';
+    structContainer.style.borderRadius = '4px';
+    structContainer.style.backgroundColor = '#f9f9f9';
+
+    // structの名前を表示
+    const structTitle = document.createElement('div');
+    structTitle.className = 'struct-title';
+    structTitle.textContent = structType;
+    structTitle.style.fontWeight = 'bold';
+    structTitle.style.marginBottom = '8px';
+    structTitle.style.color = '#333';
+    structContainer.appendChild(structTitle);
+
+    // struct内のプロパティごとに入力要素を作成
+    Object.entries(structDef.properties).forEach(([propKey, propDef]) => {
+      const propContainer = document.createElement('div');
+      propContainer.className = 'struct-property';
+      propContainer.style.marginBottom = '8px';
+
+      const label = document.createElement('label');
+      label.textContent = (propDef.label || propKey) + ':';
+      label.style.display = 'block';
+      label.style.marginBottom = '2px';
+      label.style.fontSize = '0.9em';
+
+      let inputElement;
+      // プロパティの型に応じて入力要素を作成
+      if (propDef.type === 'string' || propDef.type === 'text') {
+        inputElement = document.createElement('input');
+        inputElement.type = 'text';
+        inputElement.placeholder = propDef.placeholder || '';
+        if (propDef.default !== undefined) {
+          inputElement.value = propDef.default;
+        }
+      } else if (propDef.type === 'number' || propDef.type === 'integer') {
+        inputElement = document.createElement('input');
+        inputElement.type = 'number';
+        if (propDef.min !== undefined) inputElement.min = propDef.min;
+        if (propDef.max !== undefined) inputElement.max = propDef.max;
+        if (propDef.step !== undefined) inputElement.step = propDef.step;
+        if (propDef.default !== undefined) {
+          inputElement.value = propDef.default;
+        }
+      } else if (propDef.type === 'select' && propDef.options) {
+        inputElement = document.createElement('select');
+        propDef.options.forEach(option => {
+          const optionElement = document.createElement('option');
+          optionElement.value = option.value;
+          optionElement.textContent = option.label;
+          inputElement.appendChild(optionElement);
+        });
+        if (propDef.default !== undefined) {
+          inputElement.value = propDef.default;
+        }
+      } else {
+        // 未対応の型はテキスト入力として扱う
+        inputElement = document.createElement('input');
+        inputElement.type = 'text';
+        inputElement.placeholder = `型: ${propDef.type}`;
+        if (propDef.default !== undefined) {
+          inputElement.value = propDef.default;
+        }
+      }
+
+      // 入力要素にIDを設定（struct内プロパティ用の特別な形式）
+      inputElement.id = `${typeKey}-${paramKey}-${propKey}`;
+      inputElement.dataset.structType = structType;
+      inputElement.dataset.propertyKey = propKey;
+      inputElement.style.width = '100%';
+      inputElement.style.padding = '4px';
+      inputElement.style.border = '1px solid #ddd';
+      inputElement.style.borderRadius = '2px';
+
+      label.appendChild(inputElement);
+      propContainer.appendChild(label);
+      structContainer.appendChild(propContainer);
+    });
+
+    return structContainer;
+  }
+
+  // struct型パラメータの値を取得
+  getStructValue(structContainer) {
+    const structValue = {};
+    const propertyInputs = structContainer.querySelectorAll('input, select');
+    
+    propertyInputs.forEach(input => {
+      const propertyKey = input.dataset.propertyKey;
+      if (propertyKey) {
+        structValue[propertyKey] = input.value;
+      }
+    });
+    
+    return structValue;
+  }
+
+  // struct型パラメータに値を設定
+  setStructValue(structContainer, structValue) {
+    if (!structValue || typeof structValue !== 'object') {
+      return;
+    }
+    
+    const propertyInputs = structContainer.querySelectorAll('input, select');
+    propertyInputs.forEach(input => {
+      const propertyKey = input.dataset.propertyKey;
+      if (propertyKey && structValue[propertyKey] !== undefined) {
+        input.value = structValue[propertyKey];
+      }
+    });
+  }
+
+  // 指定したtypeの全パラメータ値を取得（struct型対応）
+  getTypeParamValues(type) {
+    const values = {};
+    if (!this.typeParams[type]) return values;
+    
+    Object.entries(this.typeParams[type]).forEach(([key, element]) => {
+      if (element) {
+        // struct型かどうかを判定
+        if (element.classList && element.classList.contains('struct-container')) {
+          values[key] = this.getStructValue(element);
+        } else {
+          values[key] = element.value;
+        }
+      }
+    });
+    
+    return values;
   }
 }
 

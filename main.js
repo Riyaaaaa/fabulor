@@ -552,7 +552,7 @@ ipcMain.handle('open-recent-project', async (event, projectPath) => {
 });
 
 // 全シーンをCSVとしてエクスポート
-ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, blockTypes) => {
+ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, blockTypes, structs) => {
   try {
     // プロジェクトファイルと同じ階層にoutputディレクトリを作成
     const projectDir = path.dirname(projectPath);
@@ -587,7 +587,7 @@ ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, bl
         }
         
         // CSVデータを生成
-        const csvData = generateCSVData(sceneParagraphs, blockTypes);
+        const csvData = generateCSVData(sceneParagraphs, blockTypes, structs);
         
         // ファイル名を作成（シーン名から危険な文字を除去）
         const safeSceneName = scene.name.replace(/[<>:"/\\|?*]/g, '_');
@@ -632,7 +632,7 @@ async function loadSceneData(projectPath, sceneFileName) {
 }
 
 // CSVデータを生成するヘルパー関数
-function generateCSVData(paragraphs, blockTypes) {
+function generateCSVData(paragraphs, blockTypes, structs) {
   // ブロックタイプを取得するヘルパー関数
   function getBlockType(typeName) {
     return blockTypes[typeName] || null;
@@ -681,8 +681,16 @@ function generateCSVData(paragraphs, blockTypes) {
     if (blockType && blockType.parameters) {
       const paramKeys = Object.keys(blockType.parameters);
       paramKeys.forEach(paramKey => {
+        const paramDef = blockType.parameters[paramKey];
         const value = paragraph[paramKey] || '';
-        row.push(escapeCSVValue(value));
+        
+        // struct型の場合は特別な形式で出力
+        if (paramDef.type && isValidStructType(paramDef.type, structs)) {
+          const structValue = formatStructForCSV(value, paramDef.type, structs);
+          row.push(escapeCSVValue(structValue));
+        } else {
+          row.push(escapeCSVValue(value));
+        }
         argIndex++;
       });
     }
@@ -704,6 +712,38 @@ function generateCSVData(paragraphs, blockTypes) {
 
   // CSV文字列に変換
   return rows.map(row => row.join(',')).join('\n');
+}
+
+// struct型の検証ヘルパー関数
+function isValidStructType(typeName, structs) {
+  // structs定義から構造体を探す
+  if (structs && structs[typeName]) {
+    return true;
+  }
+  return false;
+}
+
+// struct型の値をCSV用の文字列形式に変換
+function formatStructForCSV(structValue, structType, structs) {
+  if (!structValue || typeof structValue !== 'object') {
+    return '';
+  }
+  
+  const structDef = structs && structs[structType];
+  if (!structDef || !structDef.properties) {
+    return '';
+  }
+  
+  // プロパティ=値の形式で結合
+  const pairs = [];
+  Object.keys(structDef.properties).forEach(propKey => {
+    const propValue = structValue[propKey];
+    if (propValue !== undefined && propValue !== null && propValue !== '') {
+      pairs.push(`${propKey}="${propValue}"`);
+    }
+  });
+  
+  return pairs.join(';');
 }
 
 // CSV値をエスケープするヘルパー関数

@@ -1,6 +1,9 @@
 // ブロックタイプ管理モジュール
 class BlockTypeManager {
   constructor() {
+    // カスタム構造体定義
+    this.structs = {};
+    
     // 標準定義のブロックタイプ
     this.standardTypes = {
       dialogue: {
@@ -63,6 +66,10 @@ class BlockTypeManager {
       console.log("Loading schema file:", schemaFileName);
       const result = await window.electronAPI.loadSchemaFile(projectPath, schemaFileName);
       if (result.success) {
+        // structs定義を読み込み
+        this.structs = result.data.structs || {};
+        console.log('Loaded structs:', Object.keys(this.structs));
+        
         // スキーマファイルから読み込んだタイプをマージ（標準定義は常に含む）
         const loadedTypes = result.data.block_types || {};
         
@@ -109,6 +116,19 @@ class BlockTypeManager {
   requiresText(type) {
     const blockType = this.blockTypes[type];
     return blockType ? blockType.requires_text : true;
+  }
+
+  getStructs() {
+    return this.structs;
+  }
+
+  getStruct(structName) {
+    return this.structs[structName];
+  }
+
+  // 構造体の型がパラメータ型として有効かチェック
+  isValidStructType(typeName) {
+    return this.structs.hasOwnProperty(typeName);
   }
 }
 

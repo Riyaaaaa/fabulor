@@ -595,10 +595,11 @@ class ScenarioManager {
       return;
     }
     
-    // ブロックタイプ定義を取得
+    // ブロックタイプ定義と構造体定義を取得
     const blockTypes = this.blockTypeManager.getBlockTypes();
+    const structs = this.blockTypeManager.getStructs();
     
-    await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, blockTypes);
+    await this.projectManager.exportAllScenesAsCSV(projectPath, scenes, blockTypes, structs);
   }
 
   async exportText() {
@@ -927,7 +928,12 @@ class ScenarioManager {
     if (typeParams[type]) {
       Object.entries(typeParams[type]).forEach(([key, element]) => {
         if (element) {
-          selectedParagraph[key] = element.value;
+          // struct型かどうかを判定
+          if (element.classList && element.classList.contains('struct-container')) {
+            selectedParagraph[key] = this.uiManager.getStructValue(element);
+          } else {
+            selectedParagraph[key] = element.value;
+          }
         }
       });
     }

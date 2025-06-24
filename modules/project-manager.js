@@ -145,9 +145,9 @@ class ProjectManager {
     }
   }
 
-  async exportAllScenesAsCSV(projectPath, scenes, blockTypes) {
+  async exportAllScenesAsCSV(projectPath, scenes, blockTypes, structs) {
     try {
-      const result = await window.electronAPI.exportAllScenesAsCSV(projectPath, scenes, blockTypes);
+      const result = await window.electronAPI.exportAllScenesAsCSV(projectPath, scenes, blockTypes, structs);
       
       if (result.success) {
         alert(`全シーンのCSVエクスポートが完了しました。\n\n出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}`);
@@ -213,8 +213,16 @@ class ProjectManager {
       // パラメータを順番に追加
       if (blockType && blockType.parameters) {
         Object.keys(blockType.parameters).forEach(paramKey => {
+          const paramDef = blockType.parameters[paramKey];
           const value = paragraph[paramKey] || '';
-          args.push(this.escapeCSV(value.toString()));
+          
+          // struct型の場合は特別な形式で出力
+          if (paramDef.type && blockTypeManager.isValidStructType(paramDef.type)) {
+            const structValue = this.formatStructForCSV(value, paramDef.type, blockTypeManager);
+            args.push(this.escapeCSV(structValue));
+          } else {
+            args.push(this.escapeCSV(value.toString()));
+          }
         });
       }
       
@@ -233,6 +241,29 @@ class ProjectManager {
     
     // CSV文字列に変換
     return rows.map(row => row.join(',')).join('\n');
+  }
+
+  // struct型の値をCSV用の文字列形式に変換
+  formatStructForCSV(structValue, structType, blockTypeManager) {
+    if (!structValue || typeof structValue !== 'object') {
+      return '';
+    }
+    
+    const structDef = blockTypeManager.getStruct(structType);
+    if (!structDef || !structDef.properties) {
+      return '';
+    }
+    
+    // プロパティ=値の形式で結合
+    const pairs = [];
+    Object.keys(structDef.properties).forEach(propKey => {
+      const propValue = structValue[propKey];
+      if (propValue !== undefined && propValue !== null && propValue !== '') {
+        pairs.push(`${propKey}="${propValue}"`);
+      }
+    });
+    
+    return pairs.join(';');
   }
 
   escapeCSV(value) {
