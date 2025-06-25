@@ -69,7 +69,7 @@ class UIManager {
           label.textContent = paramDef.label + ':';
 
           let inputElement;
-          if (paramDef.type === 'text') {
+          if (paramDef.type === 'text' || paramDef.type === 'string') {
             inputElement = document.createElement('input');
             inputElement.type = 'text';
             inputElement.placeholder = paramDef.placeholder || '';
