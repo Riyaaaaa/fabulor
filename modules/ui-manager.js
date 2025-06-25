@@ -79,6 +79,18 @@ class UIManager {
             inputElement.placeholder = paramDef.placeholder || '';
             if (paramDef.min !== undefined) inputElement.min = paramDef.min;
             if (paramDef.step !== undefined) inputElement.step = paramDef.step;
+          } else if (paramDef.type === 'boolean') {
+            inputElement = document.createElement('select');
+            // falseオプション
+            const falseOption = document.createElement('option');
+            falseOption.value = 'false';
+            falseOption.textContent = 'いいえ';
+            inputElement.appendChild(falseOption);
+            // trueオプション
+            const trueOption = document.createElement('option');
+            trueOption.value = 'true';
+            trueOption.textContent = 'はい';
+            inputElement.appendChild(trueOption);
           } else if (paramDef.type === 'select') {
             inputElement = document.createElement('select');
             paramDef.options.forEach(option => {
@@ -590,6 +602,21 @@ class UIManager {
         if (propDef.step !== undefined) inputElement.step = propDef.step;
         if (propDef.default !== undefined) {
           inputElement.value = propDef.default;
+        }
+      } else if (propDef.type === 'boolean') {
+        inputElement = document.createElement('select');
+        // falseオプション
+        const falseOption = document.createElement('option');
+        falseOption.value = 'false';
+        falseOption.textContent = 'いいえ';
+        inputElement.appendChild(falseOption);
+        // trueオプション
+        const trueOption = document.createElement('option');
+        trueOption.value = 'true';
+        trueOption.textContent = 'はい';
+        inputElement.appendChild(trueOption);
+        if (propDef.default !== undefined) {
+          inputElement.value = propDef.default.toString();
         }
       } else if (propDef.type === 'select' && propDef.options) {
         inputElement = document.createElement('select');
