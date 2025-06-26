@@ -138,7 +138,7 @@ class SceneManager {
         createdAt: sceneInfo.createdAt || new Date().toISOString(),
         updatedAt: sceneInfo.updatedAt || new Date().toISOString(),
         exists: true, // ディレクトリから読み込んだファイルは存在する
-        paragraphs: []
+        paragraphs: sceneInfo.paragraphs || undefined // 実際のデータがある場合のみ設定
       };
       
       this.scenes.set(scene.id, scene);

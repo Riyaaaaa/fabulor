@@ -3,7 +3,7 @@ class ProjectManager {
   constructor() {
     this.projectPath = null;
     this.hasUnsavedChanges = false;
-    this.currentSchemaFile = 'block-types.yaml';
+    this.currentSchemaFile = null; // 初期値をnullに変更
   }
 
   setProjectPath(path) {
@@ -28,6 +28,10 @@ class ProjectManager {
 
   getCurrentSchemaFile() {
     return this.currentSchemaFile;
+  }
+
+  setCurrentSchemaFile(schemaFileName) {
+    this.currentSchemaFile = schemaFileName;
   }
 
   async newProject() {

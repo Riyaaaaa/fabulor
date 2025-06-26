@@ -342,6 +342,8 @@ class ScenarioManager {
       
       // スキーマファイルをロード
       try {
+        // プロジェクトマネージャーのスキーマファイル名を設定
+        this.projectManager.setCurrentSchemaFile(projectData.schemaFile);
         await this.blockTypeManager.loadSchemaFile(projectPath, projectData.schemaFile);
       } catch (error) {
         console.error('スキーマファイル読み込みエラー:', error);
@@ -463,6 +465,8 @@ class ScenarioManager {
     
     // スキーマファイルを読み込み
     if (saveResult.schemaFileName) {
+      // プロジェクトマネージャーのスキーマファイル名を更新
+      this.projectManager.setCurrentSchemaFile(saveResult.schemaFileName);
       await this.blockTypeManager.loadSchemaFile(saveResult.path, saveResult.schemaFileName);
       this.uiManager.generateTypeUI();
       this.bindSchemaEvents();
@@ -518,12 +522,35 @@ class ScenarioManager {
           });
           this.sceneManager.updateSceneParagraphs(scene.id, currentParagraphs);
         } else {
-          // その他のシーンは保存済みのデータを使用
+          // その他のシーンは既存のファイルからデータを読み込む
+          let sceneParagraphs = [];
+          
+          // シーンファイルが存在する場合は、必ずファイルから読み込む
+          if (scene.exists) {
+            try {
+              const loadResult = await window.electronAPI.loadScene(result.path, scene.fileName);
+              if (loadResult.success && loadResult.data.paragraphs) {
+                sceneParagraphs = loadResult.data.paragraphs;
+              } else {
+                console.warn(`シーン ${scene.name} のデータが空または無効です`);
+                // ファイルが存在するが読み込めない場合は、現在のメモリデータを使用
+                sceneParagraphs = scene.paragraphs || [];
+              }
+            } catch (error) {
+              console.warn(`シーン ${scene.name} の読み込みに失敗しました:`, error);
+              // エラーが発生した場合は、現在のメモリデータを使用
+              sceneParagraphs = scene.paragraphs || [];
+            }
+          } else {
+            // ファイルが存在しない場合は、メモリ上のデータを使用
+            sceneParagraphs = scene.paragraphs || [];
+          }
+          
           await window.electronAPI.saveScene(result.path, scene.id, {
             id: scene.id,
             name: scene.name,
             fileName: scene.fileName,
-            paragraphs: scene.paragraphs || []
+            paragraphs: sceneParagraphs
           });
         }
         this.sceneManager.markSceneAsExisting(scene.id, true);
