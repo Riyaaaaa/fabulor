@@ -193,7 +193,7 @@ class ProjectManager {
     });
 
     // ヘッダー行を生成
-    const headers = ['Type', 'Tag'];
+    const headers = ['ID', 'Type', 'Tag'];
     for (let i = 1; i <= maxArgs; i++) {
       headers.push(`Arg${i}`);
     }
@@ -204,6 +204,9 @@ class ProjectManager {
     paragraphs.forEach(paragraph => {
       const row = [];
       const blockType = blockTypeManager.getBlockType(paragraph.type);
+      
+      // ID
+      row.push(this.escapeCSV(paragraph.id.toString()));
       
       // Type
       row.push(this.escapeCSV(paragraph.type));

@@ -620,7 +620,7 @@ function generateCSVData(paragraphs, blockTypes, structs, enums) {
   });
 
   // ヘッダー行を生成
-  const headers = ['Type', 'Tag'];
+  const headers = ['ID', 'Type', 'Tag'];
   for (let i = 1; i <= maxArgs; i++) {
     headers.push(`Arg${i}`);
   }
@@ -629,6 +629,9 @@ function generateCSVData(paragraphs, blockTypes, structs, enums) {
   const rows = [headers];
   paragraphs.forEach(paragraph => {
     const row = [];
+    
+    // ID
+    row.push(escapeCSVValue(paragraph.id ? paragraph.id.toString() : ''));
     
     // Type
     row.push(escapeCSVValue(paragraph.type || ''));
