@@ -1,17 +1,95 @@
 {
   "name": "fabulor",
   "version": "1.0.0",
-  "description": "",
+  "description": "シナリオライティングツール - Scenario writing tool with GUID-based block management",
   "main": "main.js",
-  "scripts": {
-    "start": "electron ."
+  "homepage": "https://github.com/Riyaaaaa/fabulor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Riyaaaaa/fabulor.git"
   },
-  "keywords": [],
-  "author": "",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "dist": "electron-builder --publish=never",
+    "release": "electron-builder --publish=always",
+    "postinstall": "electron-builder install-app-deps",
+    "prepare-release": "node scripts/prepare-release.js",
+    "preversion": "npm run prepare-release"
+  },
+  "keywords": ["scenario", "writing", "novel", "game", "editor"],
+  "author": "Riyaaaaa",
   "license": "ISC",
   "type": "commonjs",
+  "build": {
+    "appId": "com.riyaaaaa.fabulor",
+    "productName": "Fabulor",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "node_modules/js-yaml/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Riyaaaaa",
+      "repo": "fabulor"
+    }
+  },
   "dependencies": {
-    "electron": "^36.4.0",
     "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^25.1.8"
   }
 }

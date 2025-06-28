@@ -1,13 +1,47 @@
 # Build folder and files #
 ##########################
 release-builds/
+dist/
+build/
 
 # Development folders and files #
 #################################
 .tmp/
-dist/
 node_modules/
 *.compiled.*
+
+# Dependencies
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
 
 # Folder config file #
 ######################
@@ -22,7 +56,6 @@ _ignore/
 logs/
 *.log
 npm-debug.log*
-.npm
 
 # Packages #
 ############
@@ -46,6 +79,10 @@ npm-debug.log*
 # Windows & Mac file caches #
 #############################
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
 ehthumbs.db
 
@@ -53,4 +90,16 @@ ehthumbs.db
 #####################
 *.lnk
 
-.idea
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+
+# Application specific
+test-integer-ids.js
