@@ -237,10 +237,8 @@ class ProjectManager {
         });
       }
       
-      // 残りの列を空文字で埋める
-      while (row.length < headers.length) {
-        row.push('');
-      }
+      // 残りの列を空文字で埋めない（行ごとに必要な列数のみ出力）
+      // 注意: これはCSV標準からは逸脱するが、差分を最小化するため
       
       rows.push(row);
     });
