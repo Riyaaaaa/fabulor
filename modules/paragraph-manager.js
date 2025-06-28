@@ -135,25 +135,56 @@ class ParagraphManager {
   }
 
   setParagraphs(paragraphs) {
-    // 古いGUID形式のIDを整数IDに変換
-    this.paragraphs = paragraphs.map((paragraph, index) => {
-      if (typeof paragraph.id === 'string') {
-        // GUID形式の場合は連番に変換
-        return { ...paragraph, id: index + 1 };
-      }
-      return paragraph;
-    });
+    // 古いGUID形式のIDがあるかチェック
+    const hasGUIDs = paragraphs.some(p => typeof p.id === 'string');
     
-    // IDの重複を解決
-    this.reassignIDs();
+    if (hasGUIDs) {
+      // GUID形式のIDを整数IDに変換
+      this.paragraphs = paragraphs.map((paragraph, index) => {
+        if (typeof paragraph.id === 'string') {
+          // GUID形式の場合は連番に変換
+          return { ...paragraph, id: index + 1 };
+        }
+        return paragraph;
+      });
+    } else {
+      // 既に整数IDの場合はそのまま設定（IDを変更しない）
+      this.paragraphs = [...paragraphs];
+    }
+    
     this.selectedParagraphId = null;
   }
 
-  // IDの重複を解決し、連番に再割り当て
+  // IDの重複を解決（削除時など必要な場合のみ使用）
   reassignIDs() {
-    this.paragraphs.forEach((paragraph, index) => {
-      paragraph.id = index + 1;
+    // 使用されているIDを収集
+    const usedIds = new Set();
+    const toReassign = [];
+    
+    this.paragraphs.forEach(paragraph => {
+      if (usedIds.has(paragraph.id)) {
+        // 重複IDは再割り当て対象
+        toReassign.push(paragraph);
+      } else {
+        usedIds.add(paragraph.id);
+      }
     });
+    
+    // 重複IDのみ新しいIDを割り当て
+    toReassign.forEach(paragraph => {
+      let newId = this.generateNewUniqueID(usedIds);
+      paragraph.id = newId;
+      usedIds.add(newId);
+    });
+  }
+  
+  // 既存IDと重複しない新しいIDを生成
+  generateNewUniqueID(excludeIds) {
+    let newId = 1;
+    while (excludeIds.has(newId)) {
+      newId++;
+    }
+    return newId;
   }
 
   clearSelection() {
@@ -191,8 +222,7 @@ class ParagraphManager {
     // 挿入位置に要素を挿入
     this.paragraphs.splice(insertIndex, 0, draggedParagraph);
     
-    // 並び替え後にIDを再割り当て
-    this.reassignIDs();
+    // IDは変更しない（並び替えても既存のIDを保持）
     
     return true;
   }
