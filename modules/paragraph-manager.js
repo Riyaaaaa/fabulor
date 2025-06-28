@@ -6,17 +6,20 @@ class ParagraphManager {
     this.blockTypeManager = blockTypeManager;
   }
 
-  generateGUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+  generateID() {
+    // 既存のIDの最大値を取得
+    let maxId = 0;
+    for (const paragraph of this.paragraphs) {
+      if (typeof paragraph.id === 'number' && paragraph.id > maxId) {
+        maxId = paragraph.id;
+      }
+    }
+    return maxId + 1;
   }
 
   createParagraph(text = '', type = 'dialogue', params = {}, tags = []) {
     const baseData = {
-      id: this.generateGUID(),
+      id: this.generateID(),
       text: text,
       type: type,
       tags: tags,
@@ -132,8 +135,25 @@ class ParagraphManager {
   }
 
   setParagraphs(paragraphs) {
-    this.paragraphs = paragraphs;
+    // 古いGUID形式のIDを整数IDに変換
+    this.paragraphs = paragraphs.map((paragraph, index) => {
+      if (typeof paragraph.id === 'string') {
+        // GUID形式の場合は連番に変換
+        return { ...paragraph, id: index + 1 };
+      }
+      return paragraph;
+    });
+    
+    // IDの重複を解決
+    this.reassignIDs();
     this.selectedParagraphId = null;
+  }
+
+  // IDの重複を解決し、連番に再割り当て
+  reassignIDs() {
+    this.paragraphs.forEach((paragraph, index) => {
+      paragraph.id = index + 1;
+    });
   }
 
   clearSelection() {
@@ -170,6 +190,9 @@ class ParagraphManager {
     
     // 挿入位置に要素を挿入
     this.paragraphs.splice(insertIndex, 0, draggedParagraph);
+    
+    // 並び替え後にIDを再割り当て
+    this.reassignIDs();
     
     return true;
   }

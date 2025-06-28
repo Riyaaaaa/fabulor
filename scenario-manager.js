@@ -255,8 +255,13 @@ class ScenarioManager {
   }
 
   deleteParagraph(paragraphId = null) {
-    const idToDelete = paragraphId || this.paragraphManager.getSelectedParagraphId();
+    let idToDelete = paragraphId || this.paragraphManager.getSelectedParagraphId();
     if (!idToDelete) return;
+    
+    // 文字列として渡された場合は整数に変換
+    if (typeof idToDelete === 'string') {
+      idToDelete = parseInt(idToDelete);
+    }
     
     // 削除前にUndo/Redo操作を作成（実行はDeleteBlockOperationのコンストラクタで状態を保存）
     const operation = new DeleteBlockOperation(this.paragraphManager, this.uiManager, idToDelete);
@@ -581,6 +586,14 @@ class ScenarioManager {
   }
 
   reorderParagraphs(draggedId, targetId, insertAfter = false) {
+    // 文字列として渡された場合は整数に変換
+    if (typeof draggedId === 'string') {
+      draggedId = parseInt(draggedId);
+    }
+    if (typeof targetId === 'string') {
+      targetId = parseInt(targetId);
+    }
+    
     // 移動前にUndo/Redo操作を作成
     const operation = new MoveBlockOperation(this.paragraphManager, this.uiManager, draggedId, targetId, insertAfter);
     

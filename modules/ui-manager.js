@@ -73,7 +73,7 @@ class UIManager {
             inputElement = document.createElement('input');
             inputElement.type = 'text';
             inputElement.placeholder = paramDef.placeholder || '';
-          } else if (paramDef.type === 'number') {
+          } else if (paramDef.type === 'number' || paramDef.type === 'integer' || paramDef.type === 'int') {
             inputElement = document.createElement('input');
             inputElement.type = 'number';
             inputElement.placeholder = paramDef.placeholder || '';
@@ -328,8 +328,8 @@ class UIManager {
       e.preventDefault();
       
       if (this.draggedElement && this.draggedElement !== item) {
-        const draggedId = this.draggedElement.dataset.id;
-        const targetId = item.dataset.id;
+        const draggedId = parseInt(this.draggedElement.dataset.id);
+        const targetId = parseInt(item.dataset.id);
         
         // マウス位置に基づいて挿入位置を決定
         const rect = item.getBoundingClientRect();
@@ -372,7 +372,7 @@ class UIManager {
     const items = this.paragraphList.querySelectorAll('.paragraph-item');
     const selectedId = this.paragraphManager.getSelectedParagraphId();
     items.forEach(item => {
-      if (item.dataset.id === selectedId) {
+      if (parseInt(item.dataset.id) === selectedId) {
         item.classList.add('selected');
       } else {
         item.classList.remove('selected');
@@ -594,7 +594,7 @@ class UIManager {
         if (propDef.default !== undefined) {
           inputElement.value = propDef.default;
         }
-      } else if (propDef.type === 'number' || propDef.type === 'integer') {
+      } else if (propDef.type === 'number' || propDef.type === 'integer' || propDef.type === 'int') {
         inputElement = document.createElement('input');
         inputElement.type = 'number';
         if (propDef.min !== undefined) inputElement.min = propDef.min;
