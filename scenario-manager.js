@@ -212,6 +212,7 @@ class ScenarioManager {
     this.bindSchemaEvents();
     
     document.getElementById('close-preview').addEventListener('click', () => this.previewManager.closePreview());
+    document.getElementById('copy-preview').addEventListener('click', () => this.copyPreviewContent());
     const previewFormat = this.uiManager.getPreviewFormat();
     previewFormat.addEventListener('change', () => this.previewManager.updatePreview());
     
@@ -220,6 +221,15 @@ class ScenarioManager {
       if (e.target === previewModal) {
         this.previewManager.closePreview();
       }
+    });
+    
+    // プレビューコンテンツでのコピーイベントをインターセプト
+    const previewContent = document.getElementById('preview-content');
+    previewContent.addEventListener('copy', (e) => {
+      e.preventDefault();
+      const format = this.uiManager.getPreviewFormat().value;
+      const textContent = this.previewManager.generateTextContent(format);
+      e.clipboardData.setData('text/plain', textContent);
     });
   }
 
@@ -986,6 +996,33 @@ class ScenarioManager {
 
   updateTitle() {
     this.projectManager.updateTitle();
+  }
+
+  copyPreviewContent() {
+    // 現在のプレビューフォーマットを取得
+    const format = this.uiManager.getPreviewFormat().value;
+    
+    // プレビューマネージャーから適切なフォーマットのテキストを生成
+    const textContent = this.previewManager.generateTextContent(format);
+    
+    if (textContent) {
+      // クリップボードにコピー
+      navigator.clipboard.writeText(textContent).then(() => {
+        // コピー成功の視覚的フィードバック
+        const copyButton = document.getElementById('copy-preview');
+        const originalText = copyButton.textContent;
+        copyButton.textContent = 'コピーしました！';
+        copyButton.style.backgroundColor = '#28a745';
+        
+        setTimeout(() => {
+          copyButton.textContent = originalText;
+          copyButton.style.backgroundColor = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('コピーに失敗しました:', err);
+        alert('コピーに失敗しました');
+      });
+    }
   }
 
   // Undo操作

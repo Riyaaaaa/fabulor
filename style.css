@@ -818,6 +818,25 @@ main {
   color: #ffffff;
 }
 
+.copy-button {
+  padding: 0.5rem 1rem;
+  background-color: #007fd4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+  background-color: #0098ff;
+}
+
+.copy-button:active {
+  background-color: #0066aa;
+}
+
 .modal-body {
   flex: 1;
   overflow: hidden;

@@ -56,6 +56,13 @@ class PreviewManager {
       const paragraphDiv = document.createElement('div');
       paragraphDiv.className = 'paragraph';
       
+      // メタタグを除去してからHTMLエスケープ
+      const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
+      const escapedText = this.escapeHtml(textWithoutMetaTags);
+      // 末尾の改行や空行を除去してから<br>タグに変換
+      const trimmedText = escapedText.replace(/[\n\r\s]*$/, '');
+      const textWithBreaks = trimmedText.replace(/\n/g, '<br>');
+      
       // セリフタイプのブロックは話者の有無に関わらず鍵カッコを表示
       if (paragraph.type === 'dialogue') {
         paragraphDiv.classList.add('dialogue');
@@ -63,13 +70,8 @@ class PreviewManager {
         paragraphDiv.classList.add('monologue');
       }
       
-      // メタタグを除去してからHTMLエスケープ
-      const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
-      const escapedText = this.escapeHtml(textWithoutMetaTags);
-      // 末尾の改行や空行を除去してから<br>タグに変換
-      const trimmedText = escapedText.replace(/[\n\r\s]*$/, '');
-      const textWithBreaks = trimmedText.replace(/\n/g, '<br>');
       paragraphDiv.innerHTML = textWithBreaks;
+      
       previewContent.appendChild(paragraphDiv);
     });
   }
@@ -160,7 +162,7 @@ class PreviewManager {
           // メタタグを除去してから末尾の改行や空行を除去
           const textWithoutMetaTags = this.metaTagParser.removeMetaTags(paragraph.text);
           const trimmedText = textWithoutMetaTags.replace(/[\n\r\s]*$/, '');
-          textContent += `${trimmedText}\n\n`;
+          textContent += `　${trimmedText}\n\n`;
         }
       });
     } else if (format === 'script') {
