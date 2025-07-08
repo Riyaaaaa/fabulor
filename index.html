@@ -27,6 +27,7 @@
         <h2>プロジェクト</h2>
         <div id="scene-list" class="scene-list"></div>
         <button id="add-scene" class="add-button" disabled>+ 新規シーン</button>
+        <button id="import-text-file" class="add-button" disabled>テキストファイル→シーン</button>
         <button id="import-text" class="add-button" disabled>テキスト→シーン</button>
       </div>
       
@@ -193,6 +194,30 @@
           <div class="migration-actions">
             <button id="execute-migration" disabled class="migration-execute-button">実行</button>
             <button id="cancel-migration" class="migration-cancel-button">キャンセル</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- テキスト入力ダイアログ -->
+  <div id="text-input-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>テキストからシーン作成</h2>
+        <button id="close-text-input" class="close-button">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="text-input-form">
+          <label for="scene-name-input">シーン名:</label>
+          <input type="text" id="scene-name-input" placeholder="新しいシーンの名前">
+          
+          <label for="scene-text-input">テキスト:</label>
+          <textarea id="scene-text-input" placeholder="シーンにしたいテキストを入力してください..." rows="10"></textarea>
+          
+          <div class="text-input-actions">
+            <button id="create-scene-from-text" class="add-button">シーンを作成</button>
+            <button id="cancel-text-input" class="cancel-button">キャンセル</button>
           </div>
         </div>
       </div>

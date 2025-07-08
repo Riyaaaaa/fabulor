@@ -190,7 +190,8 @@ class ScenarioManager {
     document.getElementById('execute-migration').addEventListener('click', () => this.executeMigration());
     document.getElementById('migration-select').addEventListener('change', () => this.onMigrationSelectChange());
     document.getElementById('add-scene').addEventListener('click', () => this.addScene());
-    document.getElementById('import-text').addEventListener('click', () => this.importTextAsScene());
+    document.getElementById('import-text-file').addEventListener('click', () => this.importTextAsScene());
+    document.getElementById('import-text').addEventListener('click', () => this.showTextInputModal());
     document.getElementById('new-project-from-recent').addEventListener('click', () => this.newProject());
     document.getElementById('open-project-from-recent').addEventListener('click', () => this.openProject());
     
@@ -1294,6 +1295,7 @@ class ScenarioManager {
       'reload-schema',
       'migration',
       'add-scene',
+      'import-text-file',
       'import-text'
     ];
     
@@ -1406,6 +1408,133 @@ class ScenarioManager {
       alert(`テキストインポートに失敗しました\n\nエラー内容: ${error.message}`);
     }
   }
+
+  showTextInputModal() {
+    const modal = document.getElementById('text-input-modal');
+    const sceneNameInput = document.getElementById('scene-name-input');
+    const sceneTextInput = document.getElementById('scene-text-input');
+    const createButton = document.getElementById('create-scene-from-text');
+    const cancelButton = document.getElementById('cancel-text-input');
+    const closeButton = document.getElementById('close-text-input');
+    
+    // 入力をクリア
+    sceneNameInput.value = '';
+    sceneTextInput.value = '';
+    
+    // モーダルを表示
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    
+    // フォーカスをシーン名入力に設定
+    sceneNameInput.focus();
+    
+    // イベントハンドラー
+    const handleCreate = () => this.createSceneFromText();
+    const handleCancel = () => this.hideTextInputModal();
+    const handleClose = () => this.hideTextInputModal();
+    
+    // 既存のイベントリスナーを削除
+    createButton.removeEventListener('click', handleCreate);
+    cancelButton.removeEventListener('click', handleCancel);
+    closeButton.removeEventListener('click', handleClose);
+    
+    // 新しいイベントリスナーを追加
+    createButton.addEventListener('click', handleCreate);
+    cancelButton.addEventListener('click', handleCancel);
+    closeButton.addEventListener('click', handleClose);
+    
+    // モーダル背景クリックで閉じる
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        this.hideTextInputModal();
+      }
+    });
+  }
+
+  hideTextInputModal() {
+    const modal = document.getElementById('text-input-modal');
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+  }
+
+  async createSceneFromText() {
+    const sceneNameInput = document.getElementById('scene-name-input');
+    const sceneTextInput = document.getElementById('scene-text-input');
+    
+    const sceneName = sceneNameInput.value.trim();
+    const sceneText = sceneTextInput.value.trim();
+    
+    if (!sceneName) {
+      alert('シーン名を入力してください');
+      sceneNameInput.focus();
+      return;
+    }
+    
+    if (!sceneText) {
+      alert('テキストを入力してください');
+      sceneTextInput.focus();
+      return;
+    }
+    
+    try {
+      const projectPath = this.projectManager.getProjectPath();
+      if (!projectPath) {
+        await this.newProject();
+      }
+      
+      // テキストをブロックに変換
+      const paragraphs = this.textImporter.importFromText(sceneText);
+      
+      if (paragraphs.length === 0) {
+        alert('インポートできるブロックが見つかりませんでした');
+        return;
+      }
+      
+      // 現在のシーンを保存
+      await this.saveCurrentScene();
+      
+      // 新しいシーンを作成
+      const newScene = this.sceneManager.createScene(sceneName);
+      
+      // シーンファイルを保存
+      await window.electronAPI.saveScene(this.projectManager.getProjectPath(), newScene.id, {
+        id: newScene.id,
+        name: newScene.name,
+        fileName: newScene.fileName,
+        paragraphs: paragraphs
+      });
+      
+      this.sceneManager.markSceneAsExisting(newScene.id, true);
+      this.sceneManager.selectScene(newScene.id);
+      this.paragraphManager.setParagraphs(paragraphs);
+      
+      // シーン編集機能を有効化
+      this.setSceneEditingEnabled(true);
+      
+      this.markAsChanged();
+      this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene.id, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName), (sceneId, sceneName) => this.deleteScene(sceneId, sceneName));
+      this.uiManager.updateCurrentSceneName(newScene.name);
+      this.uiManager.renderParagraphList();
+      
+      // 最初のブロックを選択
+      if (paragraphs.length > 0) {
+        const firstParagraph = this.paragraphManager.selectParagraph(paragraphs[0].id);
+        if (firstParagraph) {
+          this.uiManager.showEditor(firstParagraph);
+          this.uiManager.updateParagraphSelection();
+        }
+      }
+      
+      // モーダルを閉じる
+      this.hideTextInputModal();
+      
+      alert(`${paragraphs.length}個のブロックでシーン「${sceneName}」を作成しました`);
+      
+    } catch (error) {
+      console.error('シーン作成エラー:', error);
+      alert(`シーンの作成に失敗しました\n\nエラー内容: ${error.message}`);
+    }
+  }
   
   setupBeforeUnloadHandler() {
     // ブラウザのページ離脱時の確認（Electronでも動作する）
@@ -1506,7 +1635,7 @@ class ScenarioManager {
           case 'i':
             // Ctrl/Cmd + I: テキストインポート
             e.preventDefault();
-            if (!document.getElementById('import-text').disabled) {
+            if (!document.getElementById('import-text-file').disabled) {
               this.importTextAsScene();
             }
             break;
