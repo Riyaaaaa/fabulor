@@ -469,7 +469,7 @@ class ScenarioManager {
     const saveResult = await window.electronAPI.saveProject({
       version: '2.0.0',
       createdAt: new Date().toISOString(),
-      schemaFile: '', // 後で設定
+      schemaFile: '', // 初期値は空文字列、保存後に更新
       currentSceneId: null
     }, null);
     
@@ -483,6 +483,10 @@ class ScenarioManager {
     if (saveResult.schemaFileName) {
       // プロジェクトマネージャーのスキーマファイル名を更新
       this.projectManager.setCurrentSchemaFile(saveResult.schemaFileName);
+      
+      // プロジェクトファイルのschemaFileを正しい値で更新（再保存）
+      await this.projectManager.saveProject([], null);
+      
       await this.blockTypeManager.loadSchemaFile(saveResult.path, saveResult.schemaFileName);
       this.uiManager.generateTypeUI();
       this.bindSchemaEvents();

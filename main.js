@@ -177,21 +177,29 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
     const schemaFileName = `${projectName}_schema.yaml`;
     const schemaPath = path.join(projectDir, schemaFileName);
     
-    // デフォルトのスキーマ内容
-    const defaultSchemaContent = `# ブロックタイプ定義ファイル
+    // schema-template.yamlの内容を読み込んでコピー
+    let schemaContent;
+    try {
+      const templatePath = path.join(__dirname, 'schema-template.yaml');
+      schemaContent = await fs.readFile(templatePath, 'utf8');
+    } catch (error) {
+      console.warn('schema-template.yamlが見つかりません。デフォルトの内容を使用します:', error);
+      // テンプレートが見つからない場合のフォールバック
+      schemaContent = `# ブロックタイプ定義ファイル
 # このファイルでカスタムブロックタイプを定義できます
 # 注意: 「dialogue（セリフ）」と「narrative（地の文）」は標準定義として常に含まれます
 
 block_types:
   # カスタムブロックタイプをここに定義してください
 `;
+    }
 
     
     // スキーマファイルが存在しない場合のみ作成
     try {
       await fs.access(schemaPath);
     } catch {
-      await fs.writeFile(schemaPath, defaultSchemaContent, 'utf8');
+      await fs.writeFile(schemaPath, schemaContent, 'utf8');
     }
 
     
