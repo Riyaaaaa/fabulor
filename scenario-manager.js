@@ -20,7 +20,7 @@ class ScenarioManager {
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
     this.textImporter = new TextImporter(this.paragraphManager);
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager);
-    this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager);
+    this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager, this.blockTypeManager);
     this.historyManager = new HistoryManager();
     this.resizeManager = new ResizeManager();
     this.metaTagParser = new MetaTagParser();

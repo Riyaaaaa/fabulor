@@ -2,9 +2,10 @@ import { MetaTagParser } from './meta-tag-parser.js';
 
 // プレビュー管理モジュール
 class PreviewManager {
-  constructor(paragraphManager, uiManager) {
+  constructor(paragraphManager, uiManager, blockTypeManager) {
     this.paragraphManager = paragraphManager;
     this.uiManager = uiManager;
+    this.blockTypeManager = blockTypeManager;
     this.metaTagParser = new MetaTagParser();
   }
 
@@ -130,7 +131,39 @@ class PreviewManager {
 
   // 話者名を取得するヘルパーメソッド
   getCharacterName(paragraph) {
-    return paragraph.speaker || null;
+    // speakerが設定されていない場合はnullを返す
+    if (!paragraph.speaker) {
+      return null;
+    }
+    
+    // speakerがオブジェクトの場合（将来の拡張用）
+    if (typeof paragraph.speaker === 'object') {
+      return paragraph.speaker.label || paragraph.speaker.name || null;
+    }
+    
+    // ブロックタイプの定義から、speakerパラメータの型を取得
+    const blockType = this.blockTypeManager.getBlockType(paragraph.type);
+    if (blockType && blockType.parameters && blockType.parameters.speaker) {
+      const speakerParamType = blockType.parameters.speaker.type;
+      
+      // speakerの型が列挙型の場合、その列挙型から対応するlabelを取得
+      if (speakerParamType && this.blockTypeManager.isValidEnumType(speakerParamType)) {
+        const enumDef = this.blockTypeManager.getEnum(speakerParamType);
+        if (enumDef && enumDef.fields) {
+          const enumField = enumDef.fields.find(field => 
+            field.name === paragraph.speaker || 
+            field.id === paragraph.speaker ||
+            field.id === parseInt(paragraph.speaker)
+          );
+          if (enumField) {
+            return enumField.label || enumField.name || paragraph.speaker;
+          }
+        }
+      }
+    }
+    
+    // フォールバック：列挙型が見つからない場合はspeakerの値をそのまま返す
+    return paragraph.speaker;
   }
 
   // テキスト形式でのプレビュー内容生成
