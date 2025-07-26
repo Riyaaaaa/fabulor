@@ -291,8 +291,8 @@ ipcMain.handle('save-scene', async (event, projectPath, sceneId, sceneData) => {
       await fs.mkdir(scenesDir, { recursive: true });
     }
     
-    // sceneDataにfileNameが含まれている場合はそれを使用
-    const fileName = sceneData.fileName || `${sceneId}.json`;
+    // sceneDataから_fileNameを取得、なければsceneIdから生成
+    const fileName = sceneData._fileName || `${sceneId}.json`;
     const scenePath = path.join(scenesDir, fileName);
     await fs.writeFile(scenePath, JSON.stringify(sceneData, null, 2), 'utf8');
     
@@ -359,10 +359,10 @@ ipcMain.handle('scan-scenes-directory', async (event, projectPath) => {
           // シーンデータにファイル名を追加
           scenes.push({
             id: sceneData.id,
-            name: sceneData.name,
             fileName: file,
             createdAt: sceneData.createdAt,
-            updatedAt: sceneData.updatedAt
+            updatedAt: sceneData.updatedAt,
+            metadata: sceneData.metadata
           });
         } catch (error) {
           console.error(`Failed to read scene file ${file}:`, error);
@@ -552,16 +552,18 @@ ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, bl
         }
         
         if (sceneParagraphs.length === 0) {
-          console.log(`シーン "${scene.name}" は空のためスキップしました`);
+          const sceneName = (scene.fileName || scene._fileName || '').replace(/\.json$/, '');
+          console.log(`シーン "${sceneName}" は空のためスキップしました`);
           continue;
         }
         
         // CSVデータを生成
         const csvData = generateCSVData(sceneParagraphs, blockTypes, structs, enums);
         
-        // ファイル名を作成（シーン名から危険な文字を除去）
-        const safeSceneName = scene.name.replace(/[<>:"/\\|?*]/g, '_');
-        const csvFileName = `${safeSceneName}.csv`;
+        // ファイル名を作成（シーンファイル名から拡張子を除去）
+        const sceneFileName = scene.fileName || scene._fileName;
+        const baseName = sceneFileName.replace(/\.json$/, '');
+        const csvFileName = `${baseName}.csv`;
         const csvFilePath = path.join(outputDir, csvFileName);
         
         // CSVファイルを保存
@@ -569,7 +571,8 @@ ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, bl
         fileCount++;
         
       } catch (error) {
-        console.error(`シーン "${scene.name}" のエクスポート中にエラー:`, error);
+        const sceneName = (scene.fileName || scene._fileName || '').replace(/\.json$/, '');
+        console.error(`シーン "${sceneName}" のエクスポート中にエラー:`, error);
         // 個別のシーンのエラーは続行して他のシーンを処理
       }
     }

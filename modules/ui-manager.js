@@ -431,7 +431,7 @@ class UIManager {
       title.textContent = scene.name;
       
       const info = document.createElement('p');
-      info.textContent = scene.fileName;
+      info.textContent = scene._fileName || scene.fileName;
       
       contentWrapper.appendChild(title);
       contentWrapper.appendChild(info);

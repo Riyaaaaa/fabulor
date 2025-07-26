@@ -26,13 +26,12 @@ class SceneManager {
     const sanitizedName = this.sanitizeFileName(name);
     const scene = {
       id: sceneId,
-      name: name,
-      fileName: `${sanitizedName}.json`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       exists: true,
       metadata: '',
-      paragraphs: []
+      paragraphs: [],
+      _fileName: `${sanitizedName}.json` // 内部使用のみ
     };
     
     this.scenes.set(sceneId, scene);
@@ -53,17 +52,16 @@ class SceneManager {
   renameScene(sceneId, newName) {
     const scene = this.scenes.get(sceneId);
     if (scene) {
-      const oldFileName = scene.fileName;
-      scene.name = newName;
-      scene.fileName = `${this.sanitizeFileName(newName)}.json`;
+      const oldFileName = scene._fileName;
+      scene._fileName = `${this.sanitizeFileName(newName)}.json`;
       scene.updatedAt = new Date().toISOString();
       
       // ファイル名が変更された場合は、変更情報を返す
       return {
         success: true,
         oldFileName: oldFileName,
-        newFileName: scene.fileName,
-        fileNameChanged: oldFileName !== scene.fileName
+        newFileName: scene._fileName,
+        fileNameChanged: oldFileName !== scene._fileName
       };
     }
     return { success: false };
@@ -89,7 +87,21 @@ class SceneManager {
   }
 
   getScenes() {
-    return Array.from(this.scenes.values());
+    return Array.from(this.scenes.values()).map(scene => {
+      // ファイル名から拡張子を除いた部分を名前として使用
+      const name = scene._fileName ? scene._fileName.replace(/\.json$/, '') : 'Untitled';
+      return {
+        ...scene,
+        name: name
+      };
+    });
+  }
+
+  getSceneName(sceneId) {
+    const scene = this.scenes.get(sceneId);
+    if (!scene) return null;
+    // ファイル名から拡張子を除いた部分を名前として返す
+    return scene._fileName ? scene._fileName.replace(/\.json$/, '') : 'Untitled';
   }
 
   updateSceneParagraphs(sceneId, paragraphs) {
@@ -122,15 +134,14 @@ class SceneManager {
     if (!scene) return null;
     
     const projectDir = this.projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    return `${projectDir}_scenes/${scene.fileName}`;
+    return `${projectDir}_scenes/${scene._fileName}`;
   }
 
   // プロジェクトファイル用のシーンリストを生成（互換性のため残す）
   getSceneListForProject() {
     return Array.from(this.scenes.values()).map(scene => ({
       id: scene.id,
-      name: scene.name,
-      fileName: scene.fileName
+      fileName: scene._fileName
     }));
   }
 
@@ -144,8 +155,7 @@ class SceneManager {
     sceneList.forEach(sceneInfo => {
       const scene = {
         id: sceneInfo.id,
-        name: sceneInfo.name,
-        fileName: sceneInfo.fileName,
+        _fileName: sceneInfo.fileName,
         createdAt: sceneInfo.createdAt || new Date().toISOString(),
         updatedAt: sceneInfo.updatedAt || new Date().toISOString(),
         exists: true, // ディレクトリから読み込んだファイルは存在する

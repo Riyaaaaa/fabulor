@@ -396,8 +396,7 @@ class ScenarioManager {
             defaultScene.paragraphs = projectData.paragraphs;
             await window.electronAPI.saveScene(projectPath, defaultScene.id, {
               id: defaultScene.id,
-              name: defaultScene.name,
-              fileName: defaultScene.fileName,
+              _fileName: defaultScene._fileName,
               paragraphs: defaultScene.paragraphs
             });
           }
@@ -541,8 +540,7 @@ class ScenarioManager {
           const currentParagraphs = this.paragraphManager.getParagraphs();
           await window.electronAPI.saveScene(result.path, scene.id, {
             id: scene.id,
-            name: scene.name,
-            fileName: scene.fileName,
+            _fileName: scene._fileName,
             metadata: scene.metadata || '',
             paragraphs: currentParagraphs
           });
@@ -554,7 +552,7 @@ class ScenarioManager {
           // シーンファイルが存在する場合は、必ずファイルから読み込む
           if (scene.exists) {
             try {
-              const loadResult = await window.electronAPI.loadScene(result.path, scene.fileName);
+              const loadResult = await window.electronAPI.loadScene(result.path, scene._fileName);
               if (loadResult.success && loadResult.data.paragraphs) {
                 sceneParagraphs = loadResult.data.paragraphs;
               } else {
@@ -574,8 +572,7 @@ class ScenarioManager {
           
           await window.electronAPI.saveScene(result.path, scene.id, {
             id: scene.id,
-            name: scene.name,
-            fileName: scene.fileName,
+            _fileName: scene._fileName,
             metadata: scene.metadata || '',
             paragraphs: sceneParagraphs
           });
@@ -768,13 +765,13 @@ class ScenarioManager {
       
       for (const scene of scenes) {
         if (!scene.exists) {
-          console.warn(`シーンファイルが存在しません: ${scene.fileName}`);
+          console.warn(`シーンファイルが存在しません: ${scene._fileName}`);
           continue;
         }
         
         try {
           // シーンデータを読み込み
-          const result = await window.electronAPI.loadScene(projectPath, scene.fileName);
+          const result = await window.electronAPI.loadScene(projectPath, scene._fileName);
           if (!result.success || !result.data.paragraphs) {
             console.warn(`シーン \"${scene.name}\" のデータが読み込めませんでした`);
             continue;
@@ -785,7 +782,7 @@ class ScenarioManager {
           
           sceneTexts.push({
             name: scene.name,
-            fileName: scene.fileName,
+            fileName: scene._fileName,
             content: textContent
           });
         } catch (error) {
@@ -1115,13 +1112,12 @@ class ScenarioManager {
     
     const newScene = this.sceneManager.createScene(result.sceneName);
     // ファイル名を上書き
-    newScene.fileName = result.fileName;
+    newScene._fileName = result.fileName;
     
     // 空のシーンデータを保存
     await window.electronAPI.saveScene(projectPath, newScene.id, {
       id: newScene.id,
-      name: newScene.name,
-      fileName: newScene.fileName,
+      _fileName: newScene._fileName,
       metadata: '',
       paragraphs: []
     });
@@ -1157,7 +1153,7 @@ class ScenarioManager {
     const projectPath = this.projectManager.getProjectPath();
     if (projectPath && scene.exists) {
       try {
-        const result = await window.electronAPI.loadScene(projectPath, scene.fileName);
+        const result = await window.electronAPI.loadScene(projectPath, scene._fileName);
         if (result.success) {
           scene.paragraphs = result.data.paragraphs || [];
           scene.metadata = result.data.metadata || '';
@@ -1239,8 +1235,7 @@ class ScenarioManager {
       try {
         await window.electronAPI.saveScene(projectPath, currentScene.id, {
           id: currentScene.id,
-          name: currentScene.name,
-          fileName: currentScene.fileName,
+          _fileName: currentScene._fileName,
           metadata: currentScene.metadata || '',
           paragraphs: paragraphs
         });
@@ -1273,8 +1268,7 @@ class ScenarioManager {
       try {
         await window.electronAPI.saveScene(projectPath, currentScene.id, {
           id: currentScene.id,
-          name: currentScene.name,
-          fileName: currentScene.fileName,
+          _fileName: currentScene._fileName,
           metadata: currentScene.metadata || '',
           paragraphs: currentScene.paragraphs || []
         });
@@ -1301,7 +1295,7 @@ class ScenarioManager {
     
     // ファイルシステムから削除
     try {
-      await window.electronAPI.deleteSceneFile(projectPath, scene.fileName);
+      await window.electronAPI.deleteSceneFile(projectPath, scene._fileName);
     } catch (error) {
       console.error('シーンファイルの削除エラー:', error);
       alert(`シーンファイルの削除に失敗しました:\n${error.message}`);
@@ -1439,8 +1433,7 @@ class ScenarioManager {
       // シーンファイルを保存
       await window.electronAPI.saveScene(projectPath, newScene.id, {
         id: newScene.id,
-        name: newScene.name,
-        fileName: newScene.fileName,
+        _fileName: newScene._fileName,
         metadata: '',
         paragraphs: paragraphs
       });
@@ -1564,8 +1557,7 @@ class ScenarioManager {
       // シーンファイルを保存
       await window.electronAPI.saveScene(this.projectManager.getProjectPath(), newScene.id, {
         id: newScene.id,
-        name: newScene.name,
-        fileName: newScene.fileName,
+        _fileName: newScene._fileName,
         metadata: '',
         paragraphs: paragraphs
       });
