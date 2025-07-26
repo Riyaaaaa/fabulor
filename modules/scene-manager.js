@@ -1,13 +1,16 @@
 // シーン管理モジュール
 class SceneManager {
   constructor() {
-    this.scenes = new Map(); // シーンID -> シーン情報
-    this.currentSceneId = null;
+    this.scenes = new Map(); // ファイル名 -> シーン情報
+    this.currentSceneFileName = null;
     this.projectPath = null;
   }
 
-  generateSceneId() {
-    return 'scene_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  generateUniqueFileName(baseName) {
+    // タイムスタンプとランダム文字列を追加してユニークなファイル名を生成
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substr(2, 5);
+    return `${baseName}_${timestamp}_${random}.json`;
   }
 
   // ファイル名に使える文字に変換
@@ -22,90 +25,98 @@ class SceneManager {
   }
 
   createScene(name = 'New scene') {
-    const sceneId = this.generateSceneId();
     const sanitizedName = this.sanitizeFileName(name);
+    const fileName = this.generateUniqueFileName(sanitizedName);
     const scene = {
-      id: sceneId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       exists: true,
       metadata: '',
       paragraphs: [],
-      _fileName: `${sanitizedName}.json` // 内部使用のみ
+      _fileName: fileName
     };
     
-    this.scenes.set(sceneId, scene);
+    this.scenes.set(fileName, scene);
     return scene;
   }
 
-  deleteScene(sceneId) {
-    if (this.scenes.has(sceneId)) {
-      this.scenes.delete(sceneId);
-      if (this.currentSceneId === sceneId) {
-        this.currentSceneId = null;
+  deleteScene(fileName) {
+    if (this.scenes.has(fileName)) {
+      this.scenes.delete(fileName);
+      if (this.currentSceneFileName === fileName) {
+        this.currentSceneFileName = null;
       }
       return true;
     }
     return false;
   }
 
-  renameScene(sceneId, newName) {
-    const scene = this.scenes.get(sceneId);
+  renameScene(oldFileName, newName) {
+    const scene = this.scenes.get(oldFileName);
     if (scene) {
-      const oldFileName = scene._fileName;
-      scene._fileName = `${this.sanitizeFileName(newName)}.json`;
+      const sanitizedName = this.sanitizeFileName(newName);
+      const newFileName = this.generateUniqueFileName(sanitizedName);
+      scene._fileName = newFileName;
       scene.updatedAt = new Date().toISOString();
       
-      // ファイル名が変更された場合は、変更情報を返す
+      // Map内のキーも更新
+      this.scenes.delete(oldFileName);
+      this.scenes.set(newFileName, scene);
+      
+      // 現在のシーンの場合は更新
+      if (this.currentSceneFileName === oldFileName) {
+        this.currentSceneFileName = newFileName;
+      }
+      
       return {
         success: true,
         oldFileName: oldFileName,
-        newFileName: scene._fileName,
-        fileNameChanged: oldFileName !== scene._fileName
+        newFileName: newFileName,
+        fileNameChanged: true
       };
     }
     return { success: false };
   }
 
-  selectScene(sceneId) {
-    if (this.scenes.has(sceneId)) {
-      this.currentSceneId = sceneId;
-      return this.scenes.get(sceneId);
+  selectScene(fileName) {
+    if (this.scenes.has(fileName)) {
+      this.currentSceneFileName = fileName;
+      return this.scenes.get(fileName);
     }
     return null;
   }
 
   getCurrentScene() {
-    if (this.currentSceneId) {
-      return this.scenes.get(this.currentSceneId);
+    if (this.currentSceneFileName) {
+      return this.scenes.get(this.currentSceneFileName);
     }
     return null;
   }
 
-  getCurrentSceneId() {
-    return this.currentSceneId;
+  getCurrentSceneFileName() {
+    return this.currentSceneFileName;
   }
 
   getScenes() {
-    return Array.from(this.scenes.values()).map(scene => {
+    return Array.from(this.scenes.entries()).map(([fileName, scene]) => {
       // ファイル名から拡張子を除いた部分を名前として使用
-      const name = scene._fileName ? scene._fileName.replace(/\.json$/, '') : 'Untitled';
+      const name = fileName.replace(/\.json$/, '');
       return {
         ...scene,
-        name: name
+        name: name,
+        fileName: fileName // UIで必要なため追加
       };
     });
   }
 
-  getSceneName(sceneId) {
-    const scene = this.scenes.get(sceneId);
-    if (!scene) return null;
+  getSceneName(fileName) {
+    if (!this.scenes.has(fileName)) return null;
     // ファイル名から拡張子を除いた部分を名前として返す
-    return scene._fileName ? scene._fileName.replace(/\.json$/, '') : 'Untitled';
+    return fileName.replace(/\.json$/, '');
   }
 
-  updateSceneParagraphs(sceneId, paragraphs) {
-    const scene = this.scenes.get(sceneId);
+  updateSceneParagraphs(fileName, paragraphs) {
+    const scene = this.scenes.get(fileName);
     if (scene) {
       scene.paragraphs = paragraphs;
       scene.updatedAt = new Date().toISOString();
@@ -114,8 +125,8 @@ class SceneManager {
     return false;
   }
 
-  updateSceneMetadata(sceneId, metadata) {
-    const scene = this.scenes.get(sceneId);
+  updateSceneMetadata(fileName, metadata) {
+    const scene = this.scenes.get(fileName);
     if (scene) {
       scene.metadata = metadata;
       scene.updatedAt = new Date().toISOString();
@@ -128,33 +139,30 @@ class SceneManager {
     this.projectPath = projectPath;
   }
 
-  getSceneFilePath(sceneId) {
+  getSceneFilePath(fileName) {
     if (!this.projectPath) return null;
-    const scene = this.scenes.get(sceneId);
-    if (!scene) return null;
+    if (!this.scenes.has(fileName)) return null;
     
     const projectDir = this.projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    return `${projectDir}_scenes/${scene._fileName}`;
+    return `${projectDir}_scenes/${fileName}`;
   }
 
-  // プロジェクトファイル用のシーンリストを生成（互換性のため残す）
+  // プロジェクトファイル用のシーンリストを生成
   getSceneListForProject() {
-    return Array.from(this.scenes.values()).map(scene => ({
-      id: scene.id,
-      fileName: scene._fileName
+    return Array.from(this.scenes.keys()).map(fileName => ({
+      fileName: fileName
     }));
   }
 
   // scenesディレクトリから読み込んだシーンリストを設定
   loadScenesFromDirectory(sceneList) {
     this.scenes.clear();
-    this.currentSceneId = null;
+    this.currentSceneFileName = null;
     
     if (!sceneList || !Array.isArray(sceneList)) return;
     
     sceneList.forEach(sceneInfo => {
       const scene = {
-        id: sceneInfo.id,
         _fileName: sceneInfo.fileName,
         createdAt: sceneInfo.createdAt || new Date().toISOString(),
         updatedAt: sceneInfo.updatedAt || new Date().toISOString(),
@@ -163,12 +171,12 @@ class SceneManager {
         paragraphs: sceneInfo.paragraphs || undefined // 実際のデータがある場合のみ設定
       };
       
-      this.scenes.set(scene.id, scene);
+      this.scenes.set(sceneInfo.fileName, scene);
     });
   }
 
-  markSceneAsExisting(sceneId, exists) {
-    const scene = this.scenes.get(sceneId);
+  markSceneAsExisting(fileName, exists) {
+    const scene = this.scenes.get(fileName);
     if (scene) {
       scene.exists = exists;
     }
@@ -176,7 +184,7 @@ class SceneManager {
 
   clearScenes() {
     this.scenes.clear();
-    this.currentSceneId = null;
+    this.currentSceneFileName = null;
   }
 }
 

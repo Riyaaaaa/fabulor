@@ -408,15 +408,15 @@ class UIManager {
     return this.previewFormat;
   }
 
-  renderSceneList(scenes, currentSceneId, sceneClickHandler, sceneRenameHandler, sceneDeleteHandler) {
+  renderSceneList(scenes, currentSceneFileName, sceneClickHandler, sceneRenameHandler, sceneDeleteHandler) {
     this.sceneList.innerHTML = '';
     
     scenes.forEach(scene => {
       const item = document.createElement('div');
       item.className = 'scene-item';
-      item.dataset.id = scene.id;
+      item.dataset.fileName = scene.fileName;
       
-      if (scene.id === currentSceneId) {
+      if (scene.fileName === currentSceneFileName) {
         item.classList.add('selected');
       }
       
@@ -455,7 +455,7 @@ class UIManager {
             clickTimer = null;
           }
           clickTimer = setTimeout(() => {
-            sceneClickHandler(scene.id);
+            sceneClickHandler(scene.fileName);
             clickTimer = null;
           }, 300);
         } else {
@@ -468,7 +468,7 @@ class UIManager {
       deleteButton.addEventListener('click', (e) => {
         e.stopPropagation();
         if (sceneDeleteHandler) {
-          sceneDeleteHandler(scene.id, scene.name);
+          sceneDeleteHandler(scene.fileName, scene.name);
         }
       });
       
@@ -507,7 +507,7 @@ class UIManager {
     const saveChanges = () => {
       const newName = input.value.trim();
       if (newName && newName !== originalName) {
-        sceneRenameHandler(scene.id, newName);
+        sceneRenameHandler(scene.fileName, newName);
       }
       // 元の表示に戻す
       titleElement.style.display = '';

@@ -279,7 +279,7 @@ ipcMain.handle('load-schema-file', async (event, projectPath, schemaFileName) =>
 });
 
 
-ipcMain.handle('save-scene', async (event, projectPath, sceneId, sceneData) => {
+ipcMain.handle('save-scene', async (event, projectPath, fileName, sceneData) => {
   try {
     const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
     const scenesDir = `${projectDir}_scenes`;
@@ -291,9 +291,9 @@ ipcMain.handle('save-scene', async (event, projectPath, sceneId, sceneData) => {
       await fs.mkdir(scenesDir, { recursive: true });
     }
     
-    // sceneDataから_fileNameを取得、なければsceneIdから生成
-    const fileName = sceneData._fileName || `${sceneId}.json`;
-    const scenePath = path.join(scenesDir, fileName);
+    // ファイル名を使用
+    const actualFileName = sceneData._fileName || fileName;
+    const scenePath = path.join(scenesDir, actualFileName);
     await fs.writeFile(scenePath, JSON.stringify(sceneData, null, 2), 'utf8');
     
     return { success: true, path: scenePath };
@@ -358,7 +358,6 @@ ipcMain.handle('scan-scenes-directory', async (event, projectPath) => {
           
           // シーンデータにファイル名を追加
           scenes.push({
-            id: sceneData.id,
             fileName: file,
             createdAt: sceneData.createdAt,
             updatedAt: sceneData.updatedAt,
@@ -378,7 +377,7 @@ ipcMain.handle('scan-scenes-directory', async (event, projectPath) => {
   }
 });
 
-ipcMain.handle('rename-scene-file', async (event, projectPath, sceneId, oldFileName, newFileName) => {
+ipcMain.handle('rename-scene-file', async (event, projectPath, oldFileName, newFileName) => {
   try {
     const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
     const scenesDir = `${projectDir}_scenes`;
