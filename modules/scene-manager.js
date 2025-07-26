@@ -31,6 +31,7 @@ class SceneManager {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       exists: true,
+      metadata: '',
       paragraphs: []
     };
     
@@ -101,6 +102,16 @@ class SceneManager {
     return false;
   }
 
+  updateSceneMetadata(sceneId, metadata) {
+    const scene = this.scenes.get(sceneId);
+    if (scene) {
+      scene.metadata = metadata;
+      scene.updatedAt = new Date().toISOString();
+      return true;
+    }
+    return false;
+  }
+
   setProjectPath(projectPath) {
     this.projectPath = projectPath;
   }
@@ -138,6 +149,7 @@ class SceneManager {
         createdAt: sceneInfo.createdAt || new Date().toISOString(),
         updatedAt: sceneInfo.updatedAt || new Date().toISOString(),
         exists: true, // ディレクトリから読み込んだファイルは存在する
+        metadata: sceneInfo.metadata || '',
         paragraphs: sceneInfo.paragraphs || undefined // 実際のデータがある場合のみ設定
       };
       

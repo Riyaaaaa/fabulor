@@ -18,7 +18,7 @@ class ScenarioManager {
     this.projectManager = new ProjectManager();
     this.sceneManager = new SceneManager();
     this.paragraphManager = new ParagraphManager(this.blockTypeManager);
-    this.textImporter = new TextImporter(this.paragraphManager);
+    this.textImporter = new TextImporter(this.paragraphManager, this.blockTypeManager);
     this.uiManager = new UIManager(this.blockTypeManager, this.paragraphManager, this.projectManager);
     this.previewManager = new PreviewManager(this.paragraphManager, this.uiManager, this.blockTypeManager);
     this.historyManager = new HistoryManager();
@@ -201,6 +201,7 @@ class ScenarioManager {
     const editorContent = this.uiManager.getEditorContent();
     const tagsInput = this.uiManager.getTagsInput();
     const typeSelect = this.uiManager.getTypeSelect();
+    const sceneMetadataInput = document.getElementById('scene-metadata');
     
     editorContent.addEventListener('input', () => this.updateCurrentParagraph());
     editorContent.addEventListener('focus', () => this.startEdit());
@@ -209,6 +210,10 @@ class ScenarioManager {
     tagsInput.addEventListener('focus', () => this.startEdit());
     tagsInput.addEventListener('blur', () => this.finishEdit());
     typeSelect.addEventListener('change', () => this.onTypeChange());
+    
+    // シーンメタデータの変更を監視
+    sceneMetadataInput.addEventListener('input', () => this.updateSceneMetadata());
+    sceneMetadataInput.addEventListener('blur', () => this.saveSceneMetadata());
     
     this.bindSchemaEvents();
     
@@ -538,6 +543,7 @@ class ScenarioManager {
             id: scene.id,
             name: scene.name,
             fileName: scene.fileName,
+            metadata: scene.metadata || '',
             paragraphs: currentParagraphs
           });
           this.sceneManager.updateSceneParagraphs(scene.id, currentParagraphs);
@@ -570,6 +576,7 @@ class ScenarioManager {
             id: scene.id,
             name: scene.name,
             fileName: scene.fileName,
+            metadata: scene.metadata || '',
             paragraphs: sceneParagraphs
           });
         }
@@ -1115,6 +1122,7 @@ class ScenarioManager {
       id: newScene.id,
       name: newScene.name,
       fileName: newScene.fileName,
+      metadata: '',
       paragraphs: []
     });
     
@@ -1152,7 +1160,12 @@ class ScenarioManager {
         const result = await window.electronAPI.loadScene(projectPath, scene.fileName);
         if (result.success) {
           scene.paragraphs = result.data.paragraphs || [];
+          scene.metadata = result.data.metadata || '';
           this.paragraphManager.setParagraphs(scene.paragraphs);
+          // メタデータをUIに反映
+          const metadataInput = document.getElementById('scene-metadata');
+          metadataInput.value = scene.metadata;
+          metadataInput.disabled = false;
         }
       } catch (error) {
         console.error('シーンの読み込みエラー:', error);
@@ -1160,6 +1173,10 @@ class ScenarioManager {
       }
     } else {
       this.paragraphManager.setParagraphs(scene.paragraphs || []);
+      // メタデータをUIに反映
+      const metadataInput = document.getElementById('scene-metadata');
+      metadataInput.value = scene.metadata || '';
+      metadataInput.disabled = false;
     }
     
     // シーン編集機能を有効化
@@ -1224,11 +1241,45 @@ class ScenarioManager {
           id: currentScene.id,
           name: currentScene.name,
           fileName: currentScene.fileName,
+          metadata: currentScene.metadata || '',
           paragraphs: paragraphs
         });
         this.sceneManager.markSceneAsExisting(currentScene.id, true);
       } catch (error) {
         console.error('シーンの保存エラー:', error);
+      }
+    }
+  }
+
+  updateSceneMetadata() {
+    const currentScene = this.sceneManager.getCurrentScene();
+    if (!currentScene) return;
+    
+    const metadataInput = document.getElementById('scene-metadata');
+    const newMetadata = metadataInput.value;
+    
+    if (newMetadata !== currentScene.metadata) {
+      this.sceneManager.updateSceneMetadata(currentScene.id, newMetadata);
+      this.markAsChanged();
+    }
+  }
+
+  async saveSceneMetadata() {
+    const currentScene = this.sceneManager.getCurrentScene();
+    if (!currentScene) return;
+    
+    const projectPath = this.projectManager.getProjectPath();
+    if (projectPath) {
+      try {
+        await window.electronAPI.saveScene(projectPath, currentScene.id, {
+          id: currentScene.id,
+          name: currentScene.name,
+          fileName: currentScene.fileName,
+          metadata: currentScene.metadata || '',
+          paragraphs: currentScene.paragraphs || []
+        });
+      } catch (error) {
+        console.error('シーンメタデータの保存エラー:', error);
       }
     }
   }
@@ -1334,6 +1385,15 @@ class ScenarioManager {
       }
     });
     
+    // メタデータ入力の有効/無効化
+    const metadataInput = document.getElementById('scene-metadata');
+    if (metadataInput) {
+      metadataInput.disabled = !enabled;
+      if (!enabled) {
+        metadataInput.value = '';
+      }
+    }
+    
     // エディタの表示/非表示
     if (!enabled) {
       this.uiManager.showPlaceholder();
@@ -1381,6 +1441,7 @@ class ScenarioManager {
         id: newScene.id,
         name: newScene.name,
         fileName: newScene.fileName,
+        metadata: '',
         paragraphs: paragraphs
       });
 
@@ -1505,6 +1566,7 @@ class ScenarioManager {
         id: newScene.id,
         name: newScene.name,
         fileName: newScene.fileName,
+        metadata: '',
         paragraphs: paragraphs
       });
       

@@ -1,7 +1,8 @@
 // テキストインポート管理モジュール
 class TextImporter {
-  constructor(paragraphManager) {
+  constructor(paragraphManager, blockTypeManager) {
     this.paragraphManager = paragraphManager;
+    this.blockTypeManager = blockTypeManager;
   }
 
   generateParagraphId() {
@@ -168,7 +169,7 @@ class TextImporter {
     const pattern1 = /^(.+?)：「.*」/;
     const match1 = line.match(pattern1);
     if (match1) {
-      return match1[1].trim();
+      return this.normalizeSpeakerName(match1[1].trim());
     }
     
     // パターン2: 「名前「セリフ」」形式
@@ -178,11 +179,46 @@ class TextImporter {
       const speaker = match2[1].trim();
       // 短すぎる場合（助詞など）は除外
       if (speaker.length > 0 && speaker.length <= 10) {
-        return speaker;
+        return this.normalizeSpeakerName(speaker);
       }
     }
     
     return '';
+  }
+
+  // 話者名を正規化（labelからnameへの変換）
+  normalizeSpeakerName(speakerText) {
+    if (!speakerText || !this.blockTypeManager) {
+      return speakerText;
+    }
+
+    // dialogue ブロックタイプの定義を取得
+    const dialogueType = this.blockTypeManager.getBlockType('dialogue');
+    if (!dialogueType || !dialogueType.parameters || !dialogueType.parameters.speaker) {
+      return speakerText;
+    }
+
+    const speakerParamType = dialogueType.parameters.speaker.type;
+    
+    // speaker パラメータが列挙型の場合
+    if (speakerParamType && this.blockTypeManager.isValidEnumType(speakerParamType)) {
+      const enumDef = this.blockTypeManager.getEnum(speakerParamType);
+      if (enumDef && enumDef.fields) {
+        // labelとnameの両方でマッチを試みる
+        const enumField = enumDef.fields.find(field => 
+          field.label === speakerText || 
+          field.name === speakerText
+        );
+        
+        if (enumField) {
+          // nameを優先して返す
+          return enumField.name || speakerText;
+        }
+      }
+    }
+
+    // マッチしない場合は元のテキストをそのまま返す
+    return speakerText;
   }
 
   // セリフテキストを抽出

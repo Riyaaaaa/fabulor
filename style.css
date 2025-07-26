@@ -273,6 +273,31 @@ main {
   text-align: center;
 }
 
+.scene-metadata-container {
+  margin: 0 1rem 0.5rem 1rem;
+}
+
+.scene-metadata-input {
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.85rem;
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #e0e0e0;
+  box-sizing: border-box;
+}
+
+.scene-metadata-input:focus {
+  outline: none;
+  border-color: #4a9eff;
+  background-color: #1e1e1e;
+}
+
+.scene-metadata-input::placeholder {
+  color: #666666;
+}
+
 .scene-list {
   display: flex;
   flex-direction: column;
