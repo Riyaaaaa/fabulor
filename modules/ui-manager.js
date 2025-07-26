@@ -412,6 +412,11 @@ class UIManager {
     this.sceneList.innerHTML = '';
     
     scenes.forEach(scene => {
+      if (!scene.fileName) {
+        console.error("Scene missing fileName:", scene);
+        return; // このシーンをスキップ
+      }
+      
       const item = document.createElement('div');
       item.className = 'scene-item';
       item.dataset.fileName = scene.fileName;
@@ -460,7 +465,7 @@ class UIManager {
           }, 300);
         } else {
           // タイトル以外の部分は即座に処理
-          sceneClickHandler(scene.id);
+          sceneClickHandler(scene.fileName);
         }
       });
       
@@ -541,6 +546,18 @@ class UIManager {
     if (this.currentSceneName) {
       this.currentSceneName.textContent = sceneName ? `現在のシーン: ${sceneName}` : 'シーンが選択されていません';
     }
+  }
+
+  updateSceneSelection(currentSceneFileName) {
+    // シーンリストの選択状態のみを更新（再描画なし）
+    const sceneItems = this.sceneList.querySelectorAll('.scene-item');
+    sceneItems.forEach(item => {
+      if (item.dataset.fileName === currentSceneFileName) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
   }
 
 

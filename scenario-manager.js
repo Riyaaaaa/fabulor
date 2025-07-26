@@ -1127,24 +1127,38 @@ class ScenarioManager {
     this.setSceneEditingEnabled(true);
     
     this.markAsChanged();
-    this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene.id, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName), (sceneId, sceneName) => this.deleteScene(sceneId, sceneName));
+    this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene._fileName, (fileName) => this.selectScene(fileName), (fileName, newName) => this.renameScene(fileName, newName), (fileName, sceneName) => this.deleteScene(fileName, sceneName));
     this.uiManager.updateCurrentSceneName(newScene.name);
     this.uiManager.renderParagraphList();
     this.uiManager.showPlaceholder();
   }
 
-  async selectScene(sceneId) {
+  async selectScene(fileName) {
+    if (!fileName) {
+      console.error("selectScene called with undefined fileName");
+      return;
+    }
+
     // 編集中の場合は履歴を確定
     this.finishEdit();
-    
-    // 現在のシーンを保存
-    await this.saveCurrentScene();
-    
+
     // シーン切り替え時にundo/redo履歴をクリア
     this.historyManager.clear();
     
-    const scene = this.sceneManager.selectScene(sceneId);
-    if (!scene) return;
+    const scene = this.sceneManager.selectScene(fileName);
+    if (!scene) {
+      console.error("Scene not found:", fileName);
+      return;
+    }
+    
+    // シーン編集機能を有効化
+    this.setSceneEditingEnabled(true);
+    
+    // UIの選択状態を即座に更新（重い再描画を避ける）
+    this.uiManager.updateSceneSelection(fileName);
+    this.uiManager.updateCurrentSceneName(scene.name);
+
+    console.log("selecting scene#2");
     
     // シーンのデータをロード
     const projectPath = this.projectManager.getProjectPath();
@@ -1171,12 +1185,10 @@ class ScenarioManager {
       metadataInput.value = scene.metadata || '';
       metadataInput.disabled = false;
     }
+
+    console.log("selecting scene#3");
     
-    // シーン編集機能を有効化
-    this.setSceneEditingEnabled(true);
-    
-    this.uiManager.renderSceneList(this.sceneManager.getScenes(), sceneId, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName), (sceneId, sceneName) => this.deleteScene(sceneId, sceneName));
-    this.uiManager.updateCurrentSceneName(scene.name);
+    // 段落リストを更新
     this.uiManager.renderParagraphList();
     
     if (this.paragraphManager.getParagraphs().length > 0) {
@@ -1189,10 +1201,12 @@ class ScenarioManager {
     } else {
       this.uiManager.showPlaceholder();
     }
+
+    console.log("selecting scene#4");
   }
 
-  async renameScene(sceneId, newName) {
-    const renameResult = this.sceneManager.renameScene(sceneId, newName);
+  async renameScene(fileName, newName) {
+    const renameResult = this.sceneManager.renameScene(fileName, newName);
     if (renameResult.success) {
       this.markAsChanged();
       
@@ -1210,7 +1224,7 @@ class ScenarioManager {
       }
       
       // 現在のシーンの場合は表示を更新
-      if (sceneId === this.sceneManager.getCurrentSceneId()) {
+      if (renameResult.newFileName === this.sceneManager.getCurrentSceneFileName()) {
         this.uiManager.updateCurrentSceneName(newName);
       }
       
@@ -1225,18 +1239,17 @@ class ScenarioManager {
     if (!currentScene) return;
     
     const paragraphs = this.paragraphManager.getParagraphs();
-    this.sceneManager.updateSceneParagraphs(currentScene.id, paragraphs);
+    this.sceneManager.updateSceneParagraphs(currentScene._fileName, paragraphs);
     
     const projectPath = this.projectManager.getProjectPath();
     if (projectPath && paragraphs.length > 0) {
       try {
-        await window.electronAPI.saveScene(projectPath, currentScene.id, {
-          id: currentScene.id,
+        await window.electronAPI.saveScene(projectPath, currentScene._fileName, {
           _fileName: currentScene._fileName,
           metadata: currentScene.metadata || '',
           paragraphs: paragraphs
         });
-        this.sceneManager.markSceneAsExisting(currentScene.id, true);
+        this.sceneManager.markSceneAsExisting(currentScene._fileName, true);
       } catch (error) {
         console.error('シーンの保存エラー:', error);
       }
@@ -1275,7 +1288,7 @@ class ScenarioManager {
     }
   }
   
-  async deleteScene(sceneId, sceneName) {
+  async deleteScene(fileName, sceneName) {
     // 確認ダイアログを表示
     const confirmed = confirm(`シーン「${sceneName}」を削除しますか？\nこの操作は取り消せません。`);
     if (!confirmed) return;
@@ -1283,16 +1296,16 @@ class ScenarioManager {
     const projectPath = this.projectManager.getProjectPath();
     if (!projectPath) return;
     
-    // 削除するシーンのファイル名を取得
-    const scene = this.sceneManager.getScenes().find(s => s.id === sceneId);
-    if (!scene) return;
+    // 削除するシーンが存在するかチェック
+    const scenes = this.sceneManager.getScenes();
+    if (!scenes.find(s => s.fileName === fileName)) return;
     
     // 削除するシーンが現在のシーンかどうか
-    const isCurrentScene = sceneId === this.sceneManager.getCurrentSceneId();
+    const isCurrentScene = fileName === this.sceneManager.getCurrentSceneFileName();
     
     // ファイルシステムから削除
     try {
-      await window.electronAPI.deleteSceneFile(projectPath, scene._fileName);
+      await window.electronAPI.deleteSceneFile(projectPath, fileName);
     } catch (error) {
       console.error('シーンファイルの削除エラー:', error);
       alert(`シーンファイルの削除に失敗しました:\n${error.message}`);
@@ -1300,7 +1313,7 @@ class ScenarioManager {
     }
     
     // シーンを削除
-    if (this.sceneManager.deleteScene(sceneId)) {
+    if (this.sceneManager.deleteScene(fileName)) {
       this.markAsChanged();
       
       // 削除後のシーン一覧を取得
@@ -1436,14 +1449,14 @@ class ScenarioManager {
       });
 
       this.sceneManager.markSceneAsExisting(newScene.id, true);
-      this.sceneManager.selectScene(newScene.id);
+      this.sceneManager.selectScene(newScene._fileName);
       this.paragraphManager.setParagraphs(paragraphs);
 
       // シーン編集機能を有効化
       this.setSceneEditingEnabled(true);
 
       this.markAsChanged();
-      this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene.id, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName), (sceneId, sceneName) => this.deleteScene(sceneId, sceneName));
+      this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene._fileName, (fileName) => this.selectScene(fileName), (fileName, newName) => this.renameScene(fileName, newName), (fileName, sceneName) => this.deleteScene(fileName, sceneName));
       this.uiManager.updateCurrentSceneName(newScene.name);
       this.uiManager.renderParagraphList();
       
@@ -1560,14 +1573,14 @@ class ScenarioManager {
       });
       
       this.sceneManager.markSceneAsExisting(newScene.id, true);
-      this.sceneManager.selectScene(newScene.id);
+      this.sceneManager.selectScene(newScene._fileName);
       this.paragraphManager.setParagraphs(paragraphs);
       
       // シーン編集機能を有効化
       this.setSceneEditingEnabled(true);
       
       this.markAsChanged();
-      this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene.id, (sceneId) => this.selectScene(sceneId), (sceneId, newName) => this.renameScene(sceneId, newName), (sceneId, sceneName) => this.deleteScene(sceneId, sceneName));
+      this.uiManager.renderSceneList(this.sceneManager.getScenes(), newScene._fileName, (fileName) => this.selectScene(fileName), (fileName, newName) => this.renameScene(fileName, newName), (fileName, sceneName) => this.deleteScene(fileName, sceneName));
       this.uiManager.updateCurrentSceneName(newScene.name);
       this.uiManager.renderParagraphList();
       

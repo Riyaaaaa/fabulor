@@ -98,15 +98,17 @@ class SceneManager {
   }
 
   getScenes() {
-    return Array.from(this.scenes.entries()).map(([fileName, scene]) => {
+    const result = Array.from(this.scenes.entries()).map(([fileName, scene]) => {
       // ファイル名から拡張子を除いた部分を名前として使用
       const name = fileName.replace(/\.json$/, '');
-      return {
+      const sceneWithName = {
         ...scene,
         name: name,
         fileName: fileName // UIで必要なため追加
       };
+      return sceneWithName;
     });
+    return result;
   }
 
   getSceneName(fileName) {
@@ -161,6 +163,7 @@ class SceneManager {
     
     if (!sceneList || !Array.isArray(sceneList)) return;
     
+    
     sceneList.forEach(sceneInfo => {
       const scene = {
         _fileName: sceneInfo.fileName,
@@ -173,6 +176,7 @@ class SceneManager {
       
       this.scenes.set(sceneInfo.fileName, scene);
     });
+    
   }
 
   markSceneAsExisting(fileName, exists) {
