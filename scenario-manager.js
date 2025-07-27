@@ -1264,7 +1264,7 @@ class ScenarioManager {
     const newMetadata = metadataInput.value;
     
     if (newMetadata !== currentScene.metadata) {
-      this.sceneManager.updateSceneMetadata(currentScene.id, newMetadata);
+      this.sceneManager.updateSceneMetadata(currentScene._fileName, newMetadata);
       this.markAsChanged();
     }
   }
@@ -1276,8 +1276,7 @@ class ScenarioManager {
     const projectPath = this.projectManager.getProjectPath();
     if (projectPath) {
       try {
-        await window.electronAPI.saveScene(projectPath, currentScene.id, {
-          id: currentScene.id,
+        await window.electronAPI.saveScene(projectPath, currentScene._fileName, {
           _fileName: currentScene._fileName,
           metadata: currentScene.metadata || '',
           paragraphs: currentScene.paragraphs || []
