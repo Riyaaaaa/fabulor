@@ -168,7 +168,7 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
     
     await fs.writeFile(filePath, JSON.stringify(projectData, null, 2), 'utf8');
     
-    // プロジェクト名に基づいてスキーマファイルを作成
+    // プロジェクト名に基づいてスキーマファイルとメタタグファイルを作成
     const projectName = path.basename(filePath, '.fbl');
     
     // 最近のプロジェクトに追加
@@ -176,6 +176,8 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
     const projectDir = path.dirname(filePath);
     const schemaFileName = `${projectName}_schema.yaml`;
     const schemaPath = path.join(projectDir, schemaFileName);
+    const metaTagFileName = `${projectName}_meta-tag.yaml`;
+    const metaTagPath = path.join(projectDir, metaTagFileName);
     
     // schema-template.yamlの内容を読み込んでコピー
     let schemaContent;
@@ -202,8 +204,41 @@ block_types:
       await fs.writeFile(schemaPath, schemaContent, 'utf8');
     }
 
+    // メタタグファイルを作成
+    let metaTagContent;
+    try {
+      const templatePath = path.join(__dirname, 'meta-tag-template.yaml');
+      metaTagContent = await fs.readFile(templatePath, 'utf8');
+    } catch (error) {
+      console.warn('meta-tag-template.yamlが見つかりません。デフォルトの内容を使用します:', error);
+      // テンプレートが見つからない場合のフォールバック
+      metaTagContent = `# メタタグ定義ファイル
+# このファイルでゲーム内で使用するメタタグ（コマンド）を定義します
+
+settings:
+  default_color: "#666666"    # デフォルトのメタタグ色
+  error_color: "#FF0000"      # エラー時の色
+  error_underline: true       # エラー時に下線を表示
+
+meta_commands:
+  # 待機コマンド - プレイヤーの入力を待つ
+  wait:
+    label: "待機"
+    description: "プレイヤーのクリック/キー入力を待ちます"
+    color: "#0099FF"
+    parameters: []
+    example: "[wait]"
+`;
+    }
+
+    // メタタグファイルが存在しない場合のみ作成
+    try {
+      await fs.access(metaTagPath);
+    } catch {
+      await fs.writeFile(metaTagPath, metaTagContent, 'utf8');
+    }
     
-    return { success: true, path: filePath, schemaFileName: schemaFileName };
+    return { success: true, path: filePath, schemaFileName: schemaFileName, metaTagFileName: metaTagFileName };
   } catch (error) {
     console.error('Save error:', error);
     return { success: false, error: error.message };

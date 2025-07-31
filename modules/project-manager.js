@@ -4,6 +4,7 @@ class ProjectManager {
     this.projectPath = null;
     this.hasUnsavedChanges = false;
     this.currentSchemaFile = null; // 初期値をnullに変更
+    this.currentMetaTagFile = null; // メタタグファイルのパス
   }
 
   setProjectPath(path) {
@@ -34,6 +35,14 @@ class ProjectManager {
     this.currentSchemaFile = schemaFileName;
   }
 
+  getCurrentMetaTagFile() {
+    return this.currentMetaTagFile;
+  }
+
+  setCurrentMetaTagFile(metaTagFileName) {
+    this.currentMetaTagFile = metaTagFileName;
+  }
+
   async newProject() {
     this.projectPath = null;
     this.hasUnsavedChanges = false;
@@ -46,6 +55,7 @@ class ProjectManager {
         version: '2.0.0',
         createdAt: new Date().toISOString(),
         schemaFile: this.currentSchemaFile,
+        metaTagFile: this.currentMetaTagFile,
         scenes: scenes,
         currentSceneId: currentSceneId
       };
@@ -59,8 +69,12 @@ class ProjectManager {
         if (result.schemaFileName) {
           this.currentSchemaFile = result.schemaFileName;
         }
+        // メタタグファイル名を更新
+        if (result.metaTagFileName) {
+          this.currentMetaTagFile = result.metaTagFileName;
+        }
         alert('プロジェクトを保存しました');
-        return { success: true, path: result.path, schemaFileName: result.schemaFileName };
+        return { success: true, path: result.path, schemaFileName: result.schemaFileName, metaTagFileName: result.metaTagFileName };
       } else {
         const errorMessage = result.error || '不明なエラー';
         alert(`プロジェクトの保存に失敗しました\n\nエラー内容: ${errorMessage}`);
@@ -81,6 +95,7 @@ class ProjectManager {
         this.projectPath = result.path;
         this.hasUnsavedChanges = false;
         this.currentSchemaFile = result.data.schemaFile || 'schema.yaml';
+        this.currentMetaTagFile = result.data.metaTagFile || 'meta-tag-template.yaml';
         // バージョンチェック
         const version = result.data.version || '1.0.0';
         
@@ -90,6 +105,7 @@ class ProjectManager {
             version: '2.0.0',
             createdAt: result.data.createdAt,
             schemaFile: result.data.schemaFile || 'schema.yaml',
+            metaTagFile: result.data.metaTagFile || 'meta-tag-template.yaml',
             scenes: [{
               id: 'default_scene',
               name: 'メインシーン',
@@ -104,6 +120,7 @@ class ProjectManager {
             data: convertedData,
             path: result.path,
             schemaFile: this.currentSchemaFile,
+            metaTagFile: this.currentMetaTagFile,
             legacyParagraphs: result.data.paragraphs || []
           };
         }
@@ -112,7 +129,8 @@ class ProjectManager {
           success: true,
           data: result.data,
           path: result.path,
-          schemaFile: this.currentSchemaFile
+          schemaFile: this.currentSchemaFile,
+          metaTagFile: this.currentMetaTagFile
         };
       }
       return { success: false, cancelled: result.cancelled };

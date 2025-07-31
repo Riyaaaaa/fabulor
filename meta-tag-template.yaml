@@ -1,0 +1,173 @@
+# メタタグ定義ファイル
+# このファイルでゲーム内で使用するメタタグ（コマンド）を定義します
+
+settings:
+  default_color: "#666666"    # デフォルトのメタタグ色
+  error_color: "#FF0000"      # エラー時の色
+  error_underline: true       # エラー時に下線を表示
+
+meta_commands:
+  # 待機コマンド - プレイヤーの入力を待つ
+  wait:
+    label: "待機"
+    description: "プレイヤーのクリック/キー入力を待ちます"
+    color: "#0099FF"
+    parameters: []
+    example: "[wait]"
+
+  # 一時停止コマンド - 指定時間待機
+  pause:
+    label: "一時停止"
+    description: "指定したミリ秒だけ処理を停止します"
+    color: "#00CC66"
+    parameters:
+      - name: "duration"
+        type: "number"
+        label: "待機時間（ミリ秒）"
+        min: 0
+        max: 60000
+        default: 1000
+        required: true
+    example: "[pause:1000]"
+
+  # 表示速度変更コマンド
+  speed:
+    label: "表示速度"
+    description: "テキストの表示速度を変更します"
+    color: "#FF6600"
+    parameters:
+      - name: "value"
+        type: "enum"
+        label: "速度"
+        values:
+          - slow
+          - normal
+          - fast
+        default: "normal"
+        required: true
+    example: "[speed:slow]"
+
+  # フェードイン
+  fadein:
+    label: "フェードイン"
+    description: "画面をフェードインします"
+    color: "#9966CC"
+    parameters:
+      - name: "duration"
+        type: "number"
+        label: "フェード時間（ミリ秒）"
+        min: 0
+        max: 5000
+        default: 500
+        required: false
+    example: "[fadein:500]"
+
+  # フェードアウト
+  fadeout:
+    label: "フェードアウト"
+    description: "画面をフェードアウトします"
+    color: "#CC66CC"
+    parameters:
+      - name: "duration"
+        type: "number"
+        label: "フェード時間（ミリ秒）"
+        min: 0
+        max: 5000
+        default: 500
+        required: false
+    example: "[fadeout:500]"
+
+  # BGM再生
+  bgm:
+    label: "BGM再生"
+    description: "BGMを再生します"
+    color: "#00CCCC"
+    parameters:
+      - name: "filename"
+        type: "string"
+        label: "ファイル名"
+        required: true
+    example: "[bgm:theme01.mp3]"
+
+  # SE再生
+  se:
+    label: "効果音"
+    description: "効果音を再生します"
+    color: "#33CCCC"
+    parameters:
+      - name: "filename"
+        type: "string"
+        label: "ファイル名"
+        required: true
+    example: "[se:click.wav]"
+
+  # 改行
+  br:
+    label: "改行"
+    description: "改行を挿入します"
+    color: "#999999"
+    parameters: []
+    example: "[br]"
+
+  # クリア
+  clear:
+    label: "クリア"
+    description: "表示中のテキストをクリアします"
+    color: "#FF3333"
+    parameters: []
+    example: "[clear]"
+
+  # 震える演出
+  shake:
+    label: "震える"
+    description: "画面を振動させます"
+    color: "#FF9900"
+    parameters:
+      - name: "intensity"
+        type: "number"
+        label: "強度"
+        min: 1
+        max: 10
+        default: 5
+        required: false
+      - name: "duration"
+        type: "number"
+        label: "時間（ミリ秒）"
+        min: 100
+        max: 2000
+        default: 500
+        required: false
+    example: "[shake:5:500]"
+
+  # フラグ設定
+  flag:
+    label: "フラグ設定"
+    description: "ゲーム内フラグを設定します"
+    color: "#6666FF"
+    parameters:
+      - name: "name"
+        type: "string"
+        label: "フラグ名"
+        required: true
+      - name: "value"
+        type: "boolean"
+        label: "値"
+        default: true
+        required: false
+    example: "[flag:event_completed:true]"
+
+  # 変数設定
+  var:
+    label: "変数設定"
+    description: "ゲーム内変数を設定します"
+    color: "#3333FF"
+    parameters:
+      - name: "name"
+        type: "string"
+        label: "変数名"
+        required: true
+      - name: "value"
+        type: "string"
+        label: "値"
+        required: true
+    example: "[var:player_name:太郎]"

@@ -26,7 +26,13 @@ class SceneManager {
 
   createScene(name = 'New scene') {
     const sanitizedName = this.sanitizeFileName(name);
-    const fileName = this.generateUniqueFileName(sanitizedName);
+    let fileName = `${sanitizedName}.json`;
+    
+    // 同じファイル名が既に存在する場合はユニークなファイル名を生成
+    if (this.scenes.has(fileName)) {
+      fileName = this.generateUniqueFileName(sanitizedName);
+    }
+    
     const scene = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -55,7 +61,16 @@ class SceneManager {
     const scene = this.scenes.get(oldFileName);
     if (scene) {
       const sanitizedName = this.sanitizeFileName(newName);
-      const newFileName = this.generateUniqueFileName(sanitizedName);
+      const newFileName = `${sanitizedName}.json`;
+      
+      // 同じファイル名が既に存在する場合はユニークなファイル名を生成
+      if (this.scenes.has(newFileName) && newFileName !== oldFileName) {
+        return {
+          success: false,
+          error: '同じ名前のシーンが既に存在します'
+        };
+      }
+      
       scene._fileName = newFileName;
       scene.updatedAt = new Date().toISOString();
       
@@ -72,7 +87,7 @@ class SceneManager {
         success: true,
         oldFileName: oldFileName,
         newFileName: newFileName,
-        fileNameChanged: true
+        fileNameChanged: oldFileName !== newFileName
       };
     }
     return { success: false };

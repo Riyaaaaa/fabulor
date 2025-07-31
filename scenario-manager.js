@@ -54,17 +54,17 @@ class ScenarioManager {
     await this.loadMetaCommands();
   }
 
-  async loadMetaCommands() {
+  async loadMetaCommands(metaTagFilePath = 'meta-tag-template.yaml') {
     try {
-      const success = await this.metaTagParser.loadMetaCommandsFromYaml('meta-commands.yaml');
+      const success = await this.metaTagParser.loadMetaCommandsFromYaml(metaTagFilePath);
       if (success) {
-        console.log('...メタコマンド定義の読み込み完了');
+        console.log('...メタコマンド定義の読み込み完了:', metaTagFilePath);
         // グローバルフラグを設定してハイライト機能が使用可能であることを示す
         window.metaCommandsLoaded = true;
         // すべてのテキストエリアにハイライトを適用
         this.applyHighlightToAllTextAreas();
       } else {
-        console.warn('...メタコマンド定義の読み込み失敗');
+        console.warn('...メタコマンド定義の読み込み失敗:', metaTagFilePath);
         window.metaCommandsLoaded = false;
       }
     } catch (error) {
@@ -369,6 +369,35 @@ class ScenarioManager {
       } catch (error) {
         console.error('スキーマファイル読み込みエラー:', error);
         alert(`スキーマファイルの読み込みに失敗しました:\n${error.message}\n\nプロジェクトは開かれましたが、スキーマファイルが正しく読み込まれませんでした。`);
+      }
+
+      // メタタグファイルをロード
+      try {
+        // プロジェクトマネージャーのメタタグファイル名を設定
+        this.projectManager.setCurrentMetaTagFile(projectData.metaTagFile || 'meta-tag-template.yaml');
+        const metaTagFile = this.projectManager.getCurrentMetaTagFile();
+        // プロジェクト固有のメタタグファイルがある場合はそれを使用
+        if (metaTagFile !== 'meta-tag-template.yaml') {
+          const projectDir = projectPath.replace(/\.[^/.]+$/, '');
+          const metaTagPath = `${projectDir}/${metaTagFile}`;
+          const success = await this.metaTagParser.loadMetaCommandsFromYaml(metaTagPath);
+          if (success) {
+            console.log('プロジェクト固有のメタタグ定義を読み込みました:', metaTagFile);
+            window.metaCommandsLoaded = true;
+            this.applyHighlightToAllTextAreas();
+          } else {
+            console.warn('プロジェクト固有のメタタグファイルの読み込みに失敗、デフォルトを使用');
+            await this.loadMetaCommands();
+          }
+        } else {
+          // デフォルトのメタタグファイルを使用
+          await this.loadMetaCommands();
+        }
+      } catch (error) {
+        console.error('メタタグファイル読み込みエラー:', error);
+        // メタタグの読み込みに失敗してもプロジェクトは開くことができる
+        console.warn('メタタグ定義の読み込みに失敗、デフォルトを試行');
+        await this.loadMetaCommands();
       }
 
       
@@ -1218,7 +1247,10 @@ class ScenarioManager {
             await window.electronAPI.renameSceneFile(projectPath, renameResult.oldFileName, renameResult.newFileName);
           } catch (error) {
             console.error('シーンファイルのリネームエラー:', error);
-            // エラーが発生してもUI更新は続行
+            alert(`ファイルのリネームに失敗しました: ${error.message}`);
+            // エラーが発生した場合は元に戻す
+            this.sceneManager.renameScene(renameResult.newFileName, renameResult.oldFileName.replace(/\.json$/, ''));
+            return;
           }
         }
       }
@@ -1231,6 +1263,8 @@ class ScenarioManager {
       // シーンリストを再描画
       const currentSceneFileName = this.sceneManager.getCurrentSceneFileName();
       this.uiManager.renderSceneList(this.sceneManager.getScenes(), currentSceneFileName, (fileName) => this.selectScene(fileName), (fileName, newName) => this.renameScene(fileName, newName), (fileName, sceneName) => this.deleteScene(fileName, sceneName));
+    } else if (renameResult.error) {
+      alert(renameResult.error);
     }
   }
 

@@ -1,13 +1,6 @@
 // メタタグ解析モジュール
 class MetaTagParser {
   constructor() {
-    // メタタグのパターンを定義
-    this.patterns = {
-      wait: /\[wait\]/g,
-      pause: /\[pause:(\d+)\]/g,
-      speed: /\[speed:(slow|normal|fast)\]/g
-    };
-    
     // YAMLから読み込むメタコマンド定義
     this.metaCommands = {};
     this.commandColors = {};
@@ -100,19 +93,27 @@ class MetaTagParser {
     // パラメータが必要なコマンドの場合
     if (command.parameters && command.parameters.length > 0) {
       if (!parameter) {
-        return false;
+        // 必須パラメータがあるかチェック
+        return !command.parameters.some(p => p.required);
       }
       
-      // パラメータの妥当性チェック
-      const param = command.parameters[0]; // 簡略化：最初のパラメータのみチェック
+      // 複数パラメータの場合は:で分割
+      const paramValues = parameter.split(':');
       
-      if (param.type === 'number') {
-        const num = parseInt(parameter, 10);
-        if (isNaN(num)) return false;
-        if (param.min !== undefined && num < param.min) return false;
-        if (param.max !== undefined && num > param.max) return false;
-      } else if (param.type === 'enum') {
-        if (!param.values.includes(parameter)) return false;
+      // パラメータの妥当性チェック
+      for (let i = 0; i < command.parameters.length; i++) {
+        const param = command.parameters[i];
+        const value = paramValues[i];
+        
+        if (param.required && !value) {
+          return false;
+        }
+        
+        if (value) {
+          if (!this.validateParameter(param, value)) {
+            return false;
+          }
+        }
       }
     } else {
       // パラメータが不要なコマンドにパラメータがある場合
@@ -122,6 +123,31 @@ class MetaTagParser {
     }
     
     return true;
+  }
+
+  // パラメータの妥当性を検証
+  validateParameter(param, value) {
+    switch (param.type) {
+      case 'number':
+        const num = parseInt(value, 10);
+        if (isNaN(num)) return false;
+        if (param.min !== undefined && num < param.min) return false;
+        if (param.max !== undefined && num > param.max) return false;
+        return true;
+        
+      case 'enum':
+        return param.values.includes(value);
+        
+      case 'boolean':
+        return value === 'true' || value === 'false';
+        
+      case 'string':
+        // 文字列は基本的に何でもOK
+        return true;
+        
+      default:
+        return false;
+    }
   }
 
   // コマンドの色を取得
@@ -136,23 +162,17 @@ class MetaTagParser {
   removeMetaTags(text) {
     if (!text) return text;
     
-    let result = text;
-    
-    // すべてのメタタグパターンを除去
-    result = result.replace(this.patterns.wait, '');
-    result = result.replace(this.patterns.pause, '');
-    result = result.replace(this.patterns.speed, '');
-    
-    return result;
+    // 一般的なメタタグパターンを除去
+    const generalPattern = /\[([a-zA-Z_][a-zA-Z0-9_]*?)(?::([^\]]+))?\]/g;
+    return text.replace(generalPattern, '');
   }
 
   // メタタグが含まれているかチェック
   hasMetaTags(text) {
     if (!text) return false;
     
-    return this.patterns.wait.test(text) || 
-           this.patterns.pause.test(text) || 
-           this.patterns.speed.test(text);
+    const generalPattern = /\[([a-zA-Z_][a-zA-Z0-9_]*?)(?::([^\]]+))?\]/;
+    return generalPattern.test(text);
   }
 
   // テキストをメタタグで分割
@@ -193,27 +213,49 @@ class MetaTagParser {
   validateMetaTag(tagText) {
     const trimmed = tagText.trim();
     
-    // [wait]の妥当性チェック
-    if (trimmed === '[wait]') {
-      return { valid: true, type: 'wait' };
+    // 一般的なメタタグパターン
+    const generalPattern = /^\[([a-zA-Z_][a-zA-Z0-9_]*?)(?::([^\]]+))?\]$/;
+    const match = trimmed.match(generalPattern);
+    
+    if (!match) {
+      return { valid: false, error: '無効なメタタグ形式です' };
     }
     
-    // [pause:数値]の妥当性チェック
-    const pauseMatch = trimmed.match(/^\[pause:(\d+)\]$/);
-    if (pauseMatch) {
-      const duration = parseInt(pauseMatch[1], 10);
-      if (duration >= 0) {
-        return { valid: true, type: 'pause', duration };
-      }
+    const commandName = match[1];
+    const parameter = match[2] || null;
+    
+    if (!this.isValidCommand(commandName, parameter)) {
+      return { valid: false, error: `無効なコマンドまたはパラメータです: ${commandName}` };
     }
     
-    // [speed:速度]の妥当性チェック
-    const speedMatch = trimmed.match(/^\[speed:(slow|normal|fast)\]$/);
-    if (speedMatch) {
-      return { valid: true, type: 'speed', speed: speedMatch[1] };
+    const command = this.metaCommands[commandName];
+    const result = { valid: true, type: commandName };
+    
+    // パラメータを解析
+    if (parameter && command.parameters) {
+      const paramValues = parameter.split(':');
+      command.parameters.forEach((param, index) => {
+        if (paramValues[index]) {
+          result[param.name] = this.parseParameterValue(param, paramValues[index]);
+        }
+      });
     }
     
-    return { valid: false, error: '無効なメタタグです' };
+    return result;
+  }
+
+  // パラメータ値を適切な型に変換
+  parseParameterValue(param, value) {
+    switch (param.type) {
+      case 'number':
+        return parseInt(value, 10);
+      case 'boolean':
+        return value === 'true';
+      case 'string':
+      case 'enum':
+      default:
+        return value;
+    }
   }
 }
 
