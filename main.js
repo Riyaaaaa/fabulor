@@ -1045,3 +1045,157 @@ app.on('before-quit', async (event) => {
     }
   }
 });
+
+// ローカライゼーションCSV更新ハンドラー
+ipcMain.handle('update-localization-csv', async (event, projectPath, csvFileName, blocks) => {
+  try {
+    const projectDir = path.dirname(projectPath);
+    const localizationDir = path.join(projectDir, 'localization');
+
+    // localizationディレクトリを作成（存在しない場合）
+    try {
+      await fs.mkdir(localizationDir, { recursive: true });
+    } catch (error) {
+      console.error('localizationディレクトリ作成エラー:', error);
+    }
+
+    const csvPath = path.join(localizationDir, csvFileName);
+
+    // 既存のCSVファイルを読み込み（存在する場合）
+    let existingRecords = [];
+    try {
+      const csvContent = await fs.readFile(csvPath, 'utf8');
+      existingRecords = parseCSV(csvContent);
+    } catch (error) {
+      // ファイルが存在しない場合は新規作成
+      console.log(`新規CSVファイル作成: ${csvFileName}`);
+    }
+
+    // 既存レコードをMapに変換（idをキーとする）
+    const existingMap = new Map();
+    existingRecords.forEach(record => {
+      if (record.id) {
+        existingMap.set(record.id.toString(), record);
+      }
+    });
+
+    // 新しいCSVデータを生成
+    const headers = ['id', 'jp', 'en', 'cn'];
+    const rows = [headers];
+
+    blocks.forEach(block => {
+      const existingRecord = existingMap.get(block.id.toString());
+
+      const row = [
+        escapeCSV(block.id.toString()),
+        escapeCSV(block.text || ''), // jp列は常に最新のテキストで更新
+        existingRecord ? escapeCSV(existingRecord.en || '') : '', // en列は既存値を保持
+        existingRecord ? escapeCSV(existingRecord.cn || '') : ''  // cn列は既存値を保持
+      ];
+
+      rows.push(row);
+    });
+
+    const csvData = rows.map(row => row.join(',')).join('\n');
+
+    // CSVファイルを保存
+    await fs.writeFile(csvPath, csvData, 'utf8');
+
+    return {
+      success: true,
+      message: `ローカライゼーションファイルを更新しました: ${csvFileName}`,
+      path: csvPath
+    };
+  } catch (error) {
+    console.error('ローカライゼーションCSV更新エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// CSV解析ヘルパー関数
+function parseCSV(csvContent) {
+  const lines = csvContent.split('\n');
+  if (lines.length < 2) return []; // ヘッダーのみまたは空
+
+  const headers = parseCSVLine(lines[0]);
+  const records = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const values = parseCSVLine(line);
+    const record = {};
+
+    headers.forEach((header, index) => {
+      record[header] = values[index] || '';
+    });
+
+    records.push(record);
+  }
+
+  return records;
+}
+
+// CSV行を解析
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        i++; // Skip next quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(unescapeCSV(current));
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(unescapeCSV(current));
+  return result;
+}
+
+// CSV値をエスケープ
+function escapeCSV(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  value = value.toString();
+
+  // 改行を改行コード文字列に変換
+  value = value.replace(/\r\n/g, '\\r\\n')
+               .replace(/\n/g, '\\n')
+               .replace(/\r/g, '\\r');
+
+  // ダブルクォート、カンマが含まれる場合はエスケープ
+  if (value.includes('"') || value.includes(',')) {
+    value = value.replace(/"/g, '""');
+    return `"${value}"`;
+  }
+
+  return value;
+}
+
+// CSV値をアンエスケープ
+function unescapeCSV(value) {
+  if (!value) return '';
+
+  // 改行コード文字列を実際の改行に変換
+  value = value.replace(/\\r\\n/g, '\r\n')
+               .replace(/\\n/g, '\n')
+               .replace(/\\r/g, '\r');
+
+  return value;
+}

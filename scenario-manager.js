@@ -11,6 +11,7 @@ import { ResizeManager } from './modules/resize-manager.js';
 import { MetaTagParser } from './modules/meta-tag-parser.js';
 import { TextHighlighter } from './modules/text-highlighter.js';
 import { MigrationManager } from './modules/migration-manager.js';
+import { LocalizationManager } from './modules/localization-manager.js';
 
 class ScenarioManager {
   constructor() {
@@ -26,6 +27,7 @@ class ScenarioManager {
     this.metaTagParser = new MetaTagParser();
     this.textHighlighter = new TextHighlighter(this.metaTagParser);
     this.migrationManager = new MigrationManager(this.paragraphManager, this.uiManager);
+    this.localizationManager = new LocalizationManager();
     
     // 編集開始時の状態を保存するための変数
     this.editStartState = null;
@@ -194,6 +196,7 @@ class ScenarioManager {
     document.getElementById('import-text').addEventListener('click', () => this.showTextInputModal());
     document.getElementById('new-project-from-recent').addEventListener('click', () => this.newProject());
     document.getElementById('open-project-from-recent').addEventListener('click', () => this.openProject());
+    document.getElementById('update-localization').addEventListener('click', () => this.updateLocalization());
     
     // キーボードショートカットのバインド
     this.bindKeyboardShortcuts();
@@ -378,7 +381,7 @@ class ScenarioManager {
         const metaTagFile = this.projectManager.getCurrentMetaTagFile();
         // プロジェクト固有のメタタグファイルがある場合はそれを使用
         if (metaTagFile !== 'meta-tag-template.yaml') {
-          const projectDir = projectPath.replace(/\.[^/.]+$/, '');
+          const projectDir = path.dirname(projectPath);
           const metaTagPath = `${projectDir}/${metaTagFile}`;
           const success = await this.metaTagParser.loadMetaCommandsFromYaml(metaTagPath);
           if (success) {
@@ -1383,6 +1386,7 @@ class ScenarioManager {
       'save-project',
       'export-csv',
       'export-text',
+      'update-localization',
       'preview-novel',
       'reload-schema',
       'migration',
@@ -1637,6 +1641,44 @@ class ScenarioManager {
     }
   }
   
+  async updateLocalization() {
+    const projectPath = this.projectManager.getProjectPath();
+    if (!projectPath) {
+      alert('プロジェクトが保存されていません。先にプロジェクトを保存してください。');
+      return;
+    }
+
+    // 現在のシーンを保存
+    await this.saveCurrentScene();
+
+    const scenes = this.sceneManager.getScenes();
+    if (scenes.length === 0) {
+      alert('更新するシーンがありません。');
+      return;
+    }
+
+    // 確認ダイアログ
+    const confirmed = confirm(`全シーン（${scenes.length}件）のローカライゼーションファイルを更新しますか？\n\n新規ブロックはレコードが追加され、既存ブロックのjp列は最新のテキストで更新されます。\nen, cn列は既存の値が保持されます。`);
+    if (!confirmed) return;
+
+    try {
+      // 全シーンのローカライゼーションを更新
+      const result = await this.localizationManager.updateAllLocalizationCSVs(projectPath, scenes);
+
+      if (result.success) {
+        alert(`ローカライゼーションファイルの更新が完了しました。\n\n成功: ${result.successCount}件`);
+      } else {
+        const errorDetails = result.results
+          ? result.results.filter(r => !r.success).map(r => `${r.sceneName}: ${r.error}`).join('\n')
+          : '';
+        alert(`ローカライゼーションファイルの更新に一部失敗しました。\n\n成功: ${result.successCount}件\nエラー: ${result.errorCount}件\n\n${errorDetails}`);
+      }
+    } catch (error) {
+      console.error('ローカライゼーション更新エラー:', error);
+      alert(`ローカライゼーション更新中にエラーが発生しました:\n${error.message}`);
+    }
+  }
+
   setupBeforeUnloadHandler() {
     // ブラウザのページ離脱時の確認（Electronでも動作する）
     window.addEventListener('beforeunload', (e) => {
