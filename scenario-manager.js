@@ -96,18 +96,18 @@ class ScenarioManager {
   // マイグレーションモーダルを表示
   async showMigrationModal() {
     console.log('...マイグレーションモーダル表示開始');
-    
+
     if (!this.projectManager.getProjectPath()) {
-      alert('プロジェクトが開かれていません');
+      await window.electronAPI.showMessage({ message: 'プロジェクトが開かれていません' });
       return;
     }
 
     // マイグレーションスクリプト一覧を読み込み
     const migrations = await this.migrationManager.loadAvailableMigrations(this.projectManager.getProjectPath());
     console.log('...マイグレーション読み込み結果:', migrations);
-    
+
     if (migrations.length === 0) {
-      alert('migrationディレクトリにマイグレーションスクリプトが見つかりません');
+      await window.electronAPI.showMessage({ message: 'migrationディレクトリにマイグレーションスクリプトが見つかりません' });
       return;
     }
 
@@ -143,14 +143,17 @@ class ScenarioManager {
   async executeMigration() {
     const select = document.getElementById('migration-select');
     const migrationFileName = select.value;
-    
+
     if (!migrationFileName) {
-      alert('マイグレーションスクリプトを選択してください');
+      await window.electronAPI.showMessage({ message: 'マイグレーションスクリプトを選択してください' });
       return;
     }
 
     // 確認ダイアログ
-    const confirmed = confirm(`マイグレーション "${migrationFileName}" を実行しますか？\n\n現在のブロックデータが置き換えられます。事前に保存することを推奨します。`);
+    const confirmed = await window.electronAPI.showConfirm({
+      message: `マイグレーション "${migrationFileName}" を実行しますか？`,
+      detail: '現在のブロックデータが置き換えられます。事前に保存することを推奨します。'
+    });
     if (!confirmed) {
       return;
     }
@@ -166,13 +169,13 @@ class ScenarioManager {
       if (result.success) {
         this.markAsChanged();
         this.migrationManager.closeMigrationModal();
-        alert(result.message);
+        await window.electronAPI.showMessage({ message: result.message });
       } else {
-        alert(`マイグレーション実行エラー: ${result.error}`);
+        await window.electronAPI.showMessage({ type: 'error', message: 'マイグレーション実行エラー', detail: result.error });
       }
     } catch (error) {
       console.error('...マイグレーション実行エラー:', error);
-      alert(`マイグレーション実行中にエラーが発生しました: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'マイグレーション実行中にエラーが発生しました', detail: error.message });
     }
   }
 
@@ -371,7 +374,7 @@ class ScenarioManager {
         await this.blockTypeManager.loadSchemaFile(projectPath, projectData.schemaFile);
       } catch (error) {
         console.error('スキーマファイル読み込みエラー:', error);
-        alert(`スキーマファイルの読み込みに失敗しました:\n${error.message}\n\nプロジェクトは開かれましたが、スキーマファイルが正しく読み込まれませんでした。`);
+        await window.electronAPI.showMessage({ type: 'warning', message: 'スキーマファイルの読み込みに失敗しました', detail: `${error.message}\n\nプロジェクトは開かれましたが、スキーマファイルが正しく読み込まれませんでした。` });
       }
 
       // メタタグファイルをロード
@@ -416,7 +419,7 @@ class ScenarioManager {
         }
       } catch (error) {
         console.error('シーンリスト読み込みエラー:', error);
-        alert(`シーンリストの読み込みに失敗しました:\n${error.message}`);
+        await window.electronAPI.showMessage({ type: 'error', message: 'シーンリストの読み込みに失敗しました', detail: error.message });
         return;
       }
 
@@ -462,14 +465,14 @@ class ScenarioManager {
         this.uiManager.renderSceneList(this.sceneManager.getScenes(), this.sceneManager.getCurrentSceneFileName(), (fileName) => this.selectScene(fileName), (fileName, newName) => this.renameScene(fileName, newName), (fileName, sceneName) => this.deleteScene(fileName, sceneName));
       } catch (error) {
         console.error('UI再生成エラー:', error);
-        alert(`UIの更新に失敗しました:\n${error.message}`);
+        await window.electronAPI.showMessage({ type: 'error', message: 'UIの更新に失敗しました', detail: error.message });
       }
-      
+
       this.hideRecentProjects();
       this.updateTitle();
     } catch (error) {
       console.error('プロジェクト読み込みエラー:', error);
-      alert(`プロジェクトの読み込みに失敗しました:\n${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトの読み込みに失敗しました', detail: error.message });
     }
   }
 
@@ -479,18 +482,18 @@ class ScenarioManager {
       if (result.success) {
         await this.loadProject(result.data, result.path);
       } else {
-        alert('プロジェクトを開けませんでした:\n' + (result.error || '不明なエラー'));
+        await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトを開けませんでした', detail: result.error || '不明なエラー' });
       }
     } catch (error) {
       console.error('Open recent project error:', error);
-      alert('プロジェクトを開けませんでした:\n' + error.message);
+      await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトを開けませんでした', detail: error.message });
     }
   }
 
   async newProject() {
     const hasChanges = this.projectManager.hasChanges();
     if (hasChanges || this.paragraphManager.getParagraphs().length > 0) {
-      const confirmed = confirm('現在のプロジェクトを破棄して新規作成しますか？');
+      const confirmed = await window.electronAPI.showConfirm({ message: '現在のプロジェクトを破棄して新規作成しますか？' });
       if (!confirmed) return;
     }
     
@@ -616,7 +619,7 @@ class ScenarioManager {
   async openProject() {
     try {
       const result = await this.projectManager.openProject();
-      
+
       if (result.success) {
         await this.loadProject(result.data, result.path);
       } else {
@@ -625,11 +628,11 @@ class ScenarioManager {
           return;
         }
         // その他のエラーの場合は詳細なエラーメッセージを表示
-        alert('プロジェクトを開けませんでした:\n' + (result.error || '不明なエラーが発生しました'));
+        await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトを開けませんでした', detail: result.error || '不明なエラーが発生しました' });
       }
     } catch (error) {
       console.error('プロジェクトオープンエラー:', error);
-      alert(`プロジェクトを開く際にエラーが発生しました:\n\n${error.message}\n\nファイルが破損している可能性があります。`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトを開く際にエラーが発生しました', detail: `${error.message}\n\nファイルが破損している可能性があります。` });
     }
   }
 
@@ -659,16 +662,16 @@ class ScenarioManager {
   async exportCSV() {
     const projectPath = this.projectManager.getProjectPath();
     if (!projectPath) {
-      alert('プロジェクトが保存されていません。先にプロジェクトを保存してください。');
+      await window.electronAPI.showMessage({ message: 'プロジェクトが保存されていません。先にプロジェクトを保存してください。' });
       return;
     }
-    
+
     // 現在のシーンを保存してから全シーンをエクスポート
     await this.saveCurrentScene();
-    
+
     const scenes = this.sceneManager.getScenes();
     if (scenes.length === 0) {
-      alert('エクスポートするシーンがありません。');
+      await window.electronAPI.showMessage({ message: 'エクスポートするシーンがありません。' });
       return;
     }
     
@@ -683,16 +686,16 @@ class ScenarioManager {
   async exportText() {
     const projectPath = this.projectManager.getProjectPath();
     if (!projectPath) {
-      alert('プロジェクトが保存されていません。先にプロジェクトを保存してください。');
+      await window.electronAPI.showMessage({ message: 'プロジェクトが保存されていません。先にプロジェクトを保存してください。' });
       return;
     }
 
     // 現在のシーンを保存してから全シーンをエクスポート
     await this.saveCurrentScene();
-    
+
     const scenes = this.sceneManager.getScenes();
     if (scenes.length === 0) {
-      alert('エクスポートするシーンがありません。');
+      await window.electronAPI.showMessage({ message: 'エクスポートするシーンがありません。' });
       return;
     }
 
@@ -820,22 +823,22 @@ class ScenarioManager {
       }
       
       if (sceneTexts.length === 0) {
-        alert('エクスポートできるシーンがありませんでした。');
+        await window.electronAPI.showMessage({ message: 'エクスポートできるシーンがありませんでした。' });
         return;
       }
-      
+
       // メインプロセスに全シーンのテキストエクスポートを依頼
       const result = await window.electronAPI.exportAllScenesAsText(projectPath, sceneTexts, format);
-      
+
       if (result.success) {
-        alert(`全シーンのテキストエクスポートが完了しました。\n\n出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}`);
+        await window.electronAPI.showMessage({ message: '全シーンのテキストエクスポートが完了しました。', detail: `出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}` });
       } else {
         const errorMessage = result.error || '不明なエラー';
-        alert(`テキストエクスポートに失敗しました\n\nエラー内容: ${errorMessage}`);
+        await window.electronAPI.showMessage({ type: 'error', message: 'テキストエクスポートに失敗しました', detail: errorMessage });
       }
     } catch (error) {
       console.error('全シーンテキストエクスポートエラー:', error);
-      alert(`テキストエクスポートに失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'テキストエクスポートに失敗しました', detail: error.message });
     }
   }
 
@@ -1056,9 +1059,9 @@ class ScenarioManager {
           copyButton.textContent = originalText;
           copyButton.style.backgroundColor = '';
         }, 2000);
-      }).catch(err => {
+      }).catch(async err => {
         console.error('コピーに失敗しました:', err);
-        alert('コピーに失敗しました');
+        await window.electronAPI.showMessage({ type: 'error', message: 'コピーに失敗しました' });
       });
     }
   }
@@ -1087,27 +1090,27 @@ class ScenarioManager {
     try {
       const projectPath = this.projectManager.getProjectPath();
       if (!projectPath) {
-        alert('プロジェクトを開いてからスキーマを再読込してください');
+        await window.electronAPI.showMessage({ message: 'プロジェクトを開いてからスキーマを再読込してください' });
         return;
       }
 
       // 現在の選択状態を保存
       const selectedId = this.paragraphManager.getSelectedParagraphId();
-      
+
       // スキーマファイル名を取得
       const schemaFileName = this.projectManager.getCurrentSchemaFile();
-      
+
       // スキーマをリロード
       await this.blockTypeManager.loadSchemaFile(projectPath, schemaFileName);
-      
-      
+
+
       // UIを再生成
       this.uiManager.generateTypeUI();
       this.bindSchemaEvents();
-      
+
       // リストを再描画
       this.uiManager.renderParagraphList();
-      
+
       // 選択状態を復元
       if (selectedId) {
         const paragraph = this.paragraphManager.selectParagraph(selectedId);
@@ -1116,11 +1119,11 @@ class ScenarioManager {
           this.uiManager.updateParagraphSelection();
         }
       }
-      
-      alert('スキーマファイルとキャラクターファイルを再読込しました');
+
+      await window.electronAPI.showMessage({ message: 'スキーマファイルとキャラクターファイルを再読込しました' });
     } catch (error) {
       console.error('スキーマ再読込エラー:', error);
-      alert(`スキーマの再読込に失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'スキーマの再読込に失敗しました', detail: error.message });
     }
   }
 
@@ -1241,7 +1244,7 @@ class ScenarioManager {
     const renameResult = this.sceneManager.renameScene(fileName, newName);
     if (renameResult.success) {
       this.markAsChanged();
-      
+
       // ファイル名が変更された場合は、実際のファイルもリネーム
       if (renameResult.fileNameChanged) {
         const projectPath = this.projectManager.getProjectPath();
@@ -1250,24 +1253,24 @@ class ScenarioManager {
             await window.electronAPI.renameSceneFile(projectPath, renameResult.oldFileName, renameResult.newFileName);
           } catch (error) {
             console.error('シーンファイルのリネームエラー:', error);
-            alert(`ファイルのリネームに失敗しました: ${error.message}`);
+            await window.electronAPI.showMessage({ type: 'error', message: 'ファイルのリネームに失敗しました', detail: error.message });
             // エラーが発生した場合は元に戻す
             this.sceneManager.renameScene(renameResult.newFileName, renameResult.oldFileName.replace(/\.json$/, ''));
             return;
           }
         }
       }
-      
+
       // 現在のシーンの場合は表示を更新
       if (renameResult.newFileName === this.sceneManager.getCurrentSceneFileName()) {
         this.uiManager.updateCurrentSceneName(newName);
       }
-      
+
       // シーンリストを再描画
       const currentSceneFileName = this.sceneManager.getCurrentSceneFileName();
       this.uiManager.renderSceneList(this.sceneManager.getScenes(), currentSceneFileName, (fileName) => this.selectScene(fileName), (fileName, newName) => this.renameScene(fileName, newName), (fileName, sceneName) => this.deleteScene(fileName, sceneName));
     } else if (renameResult.error) {
-      alert(renameResult.error);
+      await window.electronAPI.showMessage({ type: 'error', message: renameResult.error });
     }
   }
 
@@ -1326,25 +1329,28 @@ class ScenarioManager {
   
   async deleteScene(fileName, sceneName) {
     // 確認ダイアログを表示
-    const confirmed = confirm(`シーン「${sceneName}」を削除しますか？\nこの操作は取り消せません。`);
+    const confirmed = await window.electronAPI.showConfirm({
+      message: `シーン「${sceneName}」を削除しますか？`,
+      detail: 'この操作は取り消せません。'
+    });
     if (!confirmed) return;
-    
+
     const projectPath = this.projectManager.getProjectPath();
     if (!projectPath) return;
-    
+
     // 削除するシーンが存在するかチェック
     const scenes = this.sceneManager.getScenes();
     if (!scenes.find(s => s.fileName === fileName)) return;
-    
+
     // 削除するシーンが現在のシーンかどうか
     const isCurrentScene = fileName === this.sceneManager.getCurrentSceneFileName();
-    
+
     // ファイルシステムから削除
     try {
       await window.electronAPI.deleteSceneFile(projectPath, fileName);
     } catch (error) {
       console.error('シーンファイルの削除エラー:', error);
-      alert(`シーンファイルの削除に失敗しました:\n${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'シーンファイルの削除に失敗しました', detail: error.message });
       return;
     }
     
@@ -1459,16 +1465,19 @@ class ScenarioManager {
 
       // テキストをブロックに変換
       const paragraphs = this.textImporter.importFromText(importResult.content);
-      
+
       if (paragraphs.length === 0) {
-        alert('インポートできるブロックが見つかりませんでした');
+        await window.electronAPI.showMessage({ message: 'インポートできるブロックが見つかりませんでした' });
         return;
       }
 
       // プレビューを表示
       const preview = this.textImporter.generatePreview(paragraphs);
-      const confirmed = confirm(`以下の${paragraphs.length}個のブロックをインポートしますか？\n\n${preview.substring(0, 500)}${preview.length > 500 ? '\n...' : ''}`);
-      
+      const confirmed = await window.electronAPI.showConfirm({
+        message: `以下の${paragraphs.length}個のブロックをインポートしますか？`,
+        detail: `${preview.substring(0, 500)}${preview.length > 500 ? '\n...' : ''}`
+      });
+
       if (!confirmed) return;
 
       // 現在のシーンを保存
@@ -1506,11 +1515,11 @@ class ScenarioManager {
         }
       }
 
-      alert(`${paragraphs.length}個のブロックをインポートしました`);
+      await window.electronAPI.showMessage({ message: `${paragraphs.length}個のブロックをインポートしました` });
 
     } catch (error) {
       console.error('テキストインポートエラー:', error);
-      alert(`テキストインポートに失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'テキストインポートに失敗しました', detail: error.message });
     }
   }
 
@@ -1570,28 +1579,28 @@ class ScenarioManager {
     const sceneText = sceneTextInput.value.trim();
     
     if (!sceneName) {
-      alert('シーン名を入力してください');
+      await window.electronAPI.showMessage({ message: 'シーン名を入力してください' });
       sceneNameInput.focus();
       return;
     }
-    
+
     if (!sceneText) {
-      alert('テキストを入力してください');
+      await window.electronAPI.showMessage({ message: 'テキストを入力してください' });
       sceneTextInput.focus();
       return;
     }
-    
+
     try {
       const projectPath = this.projectManager.getProjectPath();
       if (!projectPath) {
         await this.newProject();
       }
-      
+
       // テキストをブロックに変換
       const paragraphs = this.textImporter.importFromText(sceneText);
-      
+
       if (paragraphs.length === 0) {
-        alert('インポートできるブロックが見つかりませんでした');
+        await window.electronAPI.showMessage({ message: 'インポートできるブロックが見つかりませんでした' });
         return;
       }
       
@@ -1632,19 +1641,19 @@ class ScenarioManager {
       
       // モーダルを閉じる
       this.hideTextInputModal();
-      
-      alert(`${paragraphs.length}個のブロックでシーン「${sceneName}」を作成しました`);
-      
+
+      await window.electronAPI.showMessage({ message: `${paragraphs.length}個のブロックでシーン「${sceneName}」を作成しました` });
+
     } catch (error) {
       console.error('シーン作成エラー:', error);
-      alert(`シーンの作成に失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'シーンの作成に失敗しました', detail: error.message });
     }
   }
   
   async updateLocalization() {
     const projectPath = this.projectManager.getProjectPath();
     if (!projectPath) {
-      alert('プロジェクトが保存されていません。先にプロジェクトを保存してください。');
+      await window.electronAPI.showMessage({ message: 'プロジェクトが保存されていません。先にプロジェクトを保存してください。' });
       return;
     }
 
@@ -1653,12 +1662,15 @@ class ScenarioManager {
 
     const scenes = this.sceneManager.getScenes();
     if (scenes.length === 0) {
-      alert('更新するシーンがありません。');
+      await window.electronAPI.showMessage({ message: '更新するシーンがありません。' });
       return;
     }
 
     // 確認ダイアログ
-    const confirmed = confirm(`全シーン（${scenes.length}件）のローカライゼーションファイルを更新しますか？\n\n新規ブロックはレコードが追加され、既存ブロックのjp列は最新のテキストで更新されます。\nen, cn列は既存の値が保持されます。`);
+    const confirmed = await window.electronAPI.showConfirm({
+      message: `全シーン（${scenes.length}件）のローカライゼーションファイルを更新しますか？`,
+      detail: '新規ブロックはレコードが追加され、既存ブロックのjp列は最新のテキストで更新されます。\nen, cn列は既存の値が保持されます。'
+    });
     if (!confirmed) return;
 
     try {
@@ -1666,16 +1678,16 @@ class ScenarioManager {
       const result = await this.localizationManager.updateAllLocalizationCSVs(projectPath, scenes);
 
       if (result.success) {
-        alert(`ローカライゼーションファイルの更新が完了しました。\n\n成功: ${result.successCount}件`);
+        await window.electronAPI.showMessage({ message: 'ローカライゼーションファイルの更新が完了しました。', detail: `成功: ${result.successCount}件` });
       } else {
         const errorDetails = result.results
           ? result.results.filter(r => !r.success).map(r => `${r.sceneName}: ${r.error}`).join('\n')
           : '';
-        alert(`ローカライゼーションファイルの更新に一部失敗しました。\n\n成功: ${result.successCount}件\nエラー: ${result.errorCount}件\n\n${errorDetails}`);
+        await window.electronAPI.showMessage({ type: 'warning', message: 'ローカライゼーションファイルの更新に一部失敗しました。', detail: `成功: ${result.successCount}件\nエラー: ${result.errorCount}件\n\n${errorDetails}` });
       }
     } catch (error) {
       console.error('ローカライゼーション更新エラー:', error);
-      alert(`ローカライゼーション更新中にエラーが発生しました:\n${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'ローカライゼーション更新中にエラーが発生しました', detail: error.message });
     }
   }
 

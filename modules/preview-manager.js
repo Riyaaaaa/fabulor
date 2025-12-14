@@ -9,13 +9,13 @@ class PreviewManager {
     this.metaTagParser = new MetaTagParser();
   }
 
-  showPreview() {
+  async showPreview() {
     const paragraphs = this.paragraphManager.getParagraphs();
     if (paragraphs.length === 0) {
-      alert('プレビューできる段落がありません');
+      await window.electronAPI.showMessage({ message: 'プレビューできる段落がありません' });
       return;
     }
-    
+
     const previewModal = this.uiManager.getPreviewModal();
     previewModal.style.display = 'flex';  // style属性を直接設定
     previewModal.classList.add('show');

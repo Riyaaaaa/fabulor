@@ -29,7 +29,7 @@ class BlockTypeManager {
         console.log('Loaded block types:', Object.keys(this.blockTypes));
       } else {
         console.error('スキーマファイルの読み込みに失敗:', result.error);
-        alert(`スキーマファイル "${schemaFileName}" の読み込みに失敗しました。デフォルト設定を使用します。`);
+        await window.electronAPI.showMessage({ type: 'warning', message: `スキーマファイル "${schemaFileName}" の読み込みに失敗しました。`, detail: 'デフォルト設定を使用します。' });
         // フォールバック用の最小設定
         this.blockTypes = {
           dialogue: { label: 'セリフ', requires_text: true, parameters: {} },

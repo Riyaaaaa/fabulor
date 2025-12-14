@@ -21,7 +21,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadYamlFile: (yamlPath) => ipcRenderer.invoke('load-yaml-file', yamlPath),
   scanMigrationDirectory: (projectPath) => ipcRenderer.invoke('scan-migration-directory', projectPath),
   executeMigration: (projectPath, migrationFileName, blocks) => ipcRenderer.invoke('execute-migration', projectPath, migrationFileName, blocks),
-  updateLocalizationCSV: (projectPath, csvFileName, blocks) => ipcRenderer.invoke('update-localization-csv', projectPath, csvFileName, blocks)
+  updateLocalizationCSV: (projectPath, csvFileName, blocks) => ipcRenderer.invoke('update-localization-csv', projectPath, csvFileName, blocks),
+  showMessage: (options) => ipcRenderer.invoke('show-message', options),
+  showConfirm: (options) => ipcRenderer.invoke('show-confirm', options)
 });
 
 window.addEventListener('DOMContentLoaded', () => {

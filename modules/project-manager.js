@@ -73,16 +73,16 @@ class ProjectManager {
         if (result.metaTagFileName) {
           this.currentMetaTagFile = result.metaTagFileName;
         }
-        alert('プロジェクトを保存しました');
+        await window.electronAPI.showMessage({ message: 'プロジェクトを保存しました' });
         return { success: true, path: result.path, schemaFileName: result.schemaFileName, metaTagFileName: result.metaTagFileName };
       } else {
         const errorMessage = result.error || '不明なエラー';
-        alert(`プロジェクトの保存に失敗しました\n\nエラー内容: ${errorMessage}`);
+        await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトの保存に失敗しました', detail: errorMessage });
         return { success: false, error: errorMessage };
       }
     } catch (error) {
       console.error('保存エラー:', error);
-      alert(`プロジェクトの保存に失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトの保存に失敗しました', detail: error.message });
       return { success: false, error: error.message };
     }
   }
@@ -136,7 +136,7 @@ class ProjectManager {
       return { success: false, cancelled: result.cancelled };
     } catch (error) {
       console.error('読み込みエラー:', error);
-      alert(`読み込みに失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: '読み込みに失敗しました', detail: error.message });
       return { success: false, error: error.message };
     }
   }
@@ -145,11 +145,11 @@ class ProjectManager {
     try {
       // CSVデータを生成
       const csvData = this.generateCSV(paragraphs, blockTypeManager);
-      
+
       const result = await window.electronAPI.exportCSV(csvData);
-      
+
       if (result.success) {
-        alert('CSVファイルをエクスポートしました');
+        await window.electronAPI.showMessage({ message: 'CSVファイルをエクスポートしました' });
         return { success: true };
       } else {
         // キャンセルの場合は何もしない
@@ -157,12 +157,12 @@ class ProjectManager {
           return { success: false, cancelled: true };
         }
         const errorMessage = result.error || '不明なエラー';
-        alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${errorMessage}`);
+        await window.electronAPI.showMessage({ type: 'error', message: 'CSVエクスポートに失敗しました', detail: errorMessage });
         return { success: false, error: errorMessage };
       }
     } catch (error) {
       console.error('エクスポートエラー:', error);
-      alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'CSVエクスポートに失敗しました', detail: error.message });
       return { success: false, error: error.message };
     }
   }
@@ -170,9 +170,9 @@ class ProjectManager {
   async exportAllScenesAsCSV(projectPath, scenes, blockTypes, structs, enums) {
     try {
       const result = await window.electronAPI.exportAllScenesAsCSV(projectPath, scenes, blockTypes, structs, enums);
-      
+
       if (result.success) {
-        alert(`全シーンのCSVエクスポートが完了しました。\n\n出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}`);
+        await window.electronAPI.showMessage({ message: '全シーンのCSVエクスポートが完了しました。', detail: `出力先: ${result.outputDir}\n作成されたファイル数: ${result.fileCount}` });
         return { success: true };
       } else {
         // キャンセルの場合は何もしない（全シーンエクスポートはファイルダイアログを使わないため通常は発生しない）
@@ -180,12 +180,12 @@ class ProjectManager {
           return { success: false, cancelled: true };
         }
         const errorMessage = result.error || '不明なエラー';
-        alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${errorMessage}`);
+        await window.electronAPI.showMessage({ type: 'error', message: 'CSVエクスポートに失敗しました', detail: errorMessage });
         return { success: false, error: errorMessage };
       }
     } catch (error) {
       console.error('全シーンエクスポートエラー:', error);
-      alert(`CSVエクスポートに失敗しました\n\nエラー内容: ${error.message}`);
+      await window.electronAPI.showMessage({ type: 'error', message: 'CSVエクスポートに失敗しました', detail: error.message });
       return { success: false, error: error.message };
     }
   }

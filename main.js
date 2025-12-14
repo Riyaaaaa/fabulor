@@ -18,7 +18,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  
+
   // ウィンドウを閉じる前の確認
   mainWindow.on('close', (event) => {
     event.preventDefault(); // 一旦閉じることを防ぐ
@@ -83,7 +83,7 @@ function createWindow() {
           // 保存しないで終了
           mainWindow.destroy();
         }
-        // choice === 2 (キャンセル) の場合は何もしない（ウィンドウは開いたまま）
+        // choice === 2 (キャンセル) の場合は何もしない
       } else {
         // 変更がない場合は通常通り終了
         mainWindow.destroy();
@@ -162,10 +162,10 @@ ipcMain.handle('save-project', async (event, projectData, currentPath) => {
       if (result.canceled) {
         return { success: false, cancelled: true };
       }
-      
+
       filePath = result.filePath;
     }
-    
+
     await fs.writeFile(filePath, JSON.stringify(projectData, null, 2), 'utf8');
     
     // プロジェクト名に基づいてスキーマファイルとメタタグファイルを作成
@@ -259,11 +259,11 @@ ipcMain.handle('open-project', async (event) => {
     if (result.canceled || result.filePaths.length === 0) {
       return { success: false, cancelled: true };
     }
-    
+
     const filePath = result.filePaths[0];
     const fileContent = await fs.readFile(filePath, 'utf8');
     const projectData = JSON.parse(fileContent);
-    
+
     // 最近のプロジェクトに追加
     const projectName = path.basename(filePath, '.fbl');
     addRecentProject(filePath, projectName);
@@ -289,7 +289,7 @@ ipcMain.handle('export-csv', async (event, csvData) => {
     if (result.canceled) {
       return { success: false, cancelled: true };
     }
-    
+
     await fs.writeFile(result.filePath, csvData, 'utf8');
     
     return { success: true, path: result.filePath };
@@ -486,7 +486,7 @@ ipcMain.handle('save-new-scene', async (event, projectPath) => {
     if (result.canceled) {
       return { success: false };
     }
-    
+
     // ファイル名からシーン名を抽出（拡張子を除去）
     const fileName = path.basename(result.filePath);
     const sceneName = fileName.replace(/\.json$/, '');
@@ -517,7 +517,7 @@ ipcMain.handle('import-text-file', async (event) => {
     if (result.canceled || result.filePaths.length === 0) {
       return { success: false };
     }
-    
+
     const filePath = result.filePaths[0];
     const textContent = await fs.readFile(filePath, 'utf8');
     const fileName = path.basename(filePath, path.extname(filePath));
@@ -793,7 +793,7 @@ ipcMain.handle('export-text', async (event, textContent, format) => {
     if (result.canceled) {
       return { success: false, cancelled: true };
     }
-    
+
     await fs.writeFile(result.filePath, textContent, 'utf8');
     
     return { success: true, path: result.filePath };
@@ -911,14 +911,25 @@ ipcMain.handle('execute-migration', async (event, projectPath, migrationFileName
     // マイグレーションスクリプトを動的に読み込み
     delete require.cache[require.resolve(migrationPath)]; // キャッシュをクリア
     const migrationModule = require(migrationPath);
-    
+
     if (typeof migrationModule.migrate !== 'function') {
       return { success: false, error: 'マイグレーションファイルにmigrate関数が見つかりません' };
     }
-    
+
+    // initialize関数が存在する場合は実行
+    if (typeof migrationModule.initialize === 'function') {
+      try {
+        console.log('マイグレーション初期化関数を実行');
+        migrationModule.initialize();
+      } catch (error) {
+        console.error('初期化関数実行エラー:', error);
+        return { success: false, error: `初期化関数の実行中にエラーが発生しました: ${error.message}` };
+      }
+    }
+
     // 各ブロックにマイグレーションを適用
     const migratedBlocks = [];
-    
+
     for (let i = 0; i < blocks.length; i++) {
       try {
         const result = migrationModule.migrate(blocks[i]);
@@ -933,7 +944,19 @@ ipcMain.handle('execute-migration', async (event, projectPath, migrationFileName
         return { success: false, error: `ブロック ${i} の処理中にエラーが発生しました: ${error.message}` };
       }
     }
-    
+
+    // finalize関数が存在する場合は実行
+    if (typeof migrationModule.finalize === 'function') {
+      try {
+        console.log('マイグレーション終了関数を実行');
+        migrationModule.finalize();
+      } catch (error) {
+        console.error('終了関数実行エラー:', error);
+        // 終了関数のエラーは警告のみで処理を続行
+        console.warn('終了関数でエラーが発生しましたが、マイグレーション結果は返却します');
+      }
+    }
+
     return { success: true, migratedBlocks: migratedBlocks };
   } catch (error) {
     console.error('マイグレーション実行エラー:', error);
@@ -961,6 +984,32 @@ ipcMain.handle('load-yaml-file', async (event, yamlPath) => {
     console.error('YAML読み込みエラー:', error);
     return { success: false, error: error.message };
   }
+});
+
+// アラートダイアログ（alert()の代替）
+ipcMain.handle('show-message', async (event, options) => {
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: options.type || 'info',
+    title: options.title || 'Fabulor',
+    message: options.message,
+    detail: options.detail,
+    buttons: options.buttons || ['OK']
+  });
+  return result.response;
+});
+
+// 確認ダイアログ（confirm()の代替）
+ipcMain.handle('show-confirm', async (event, options) => {
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: options.type || 'question',
+    title: options.title || '確認',
+    message: options.message,
+    detail: options.detail,
+    buttons: options.buttons || ['はい', 'いいえ'],
+    defaultId: 0,
+    cancelId: 1
+  });
+  return result.response === 0;
 });
 
 // アプリケーションイベント処理
