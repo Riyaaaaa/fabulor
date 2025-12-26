@@ -1174,12 +1174,39 @@ class ScenarioManager {
       return;
     }
 
+    // 同じシーンを選択した場合は何もしない
+    if (fileName === this.sceneManager.getCurrentSceneFileName()) {
+      return;
+    }
+
     // 編集中の場合は履歴を確定
     this.finishEdit();
 
+    // 変更がある場合は確認ダイアログを表示
+    if (this.projectManager.hasChanges()) {
+      const response = await window.electronAPI.showMessage({
+        type: 'question',
+        title: '変更の保存',
+        message: '現在のシーンに変更があります。',
+        detail: '別のシーンに切り替える前に変更を保存しますか？',
+        buttons: ['保存する', '破棄する', 'キャンセル']
+      });
+
+      if (response === 0) {
+        // 「保存する」を選択
+        await this.saveCurrentScene();
+        this.projectManager.markAsSaved();
+        this.updateTitle();
+      } else if (response === 2) {
+        // 「キャンセル」を選択
+        return;
+      }
+      // response === 1 の場合は「破棄する」なので何もしない
+    }
+
     // シーン切り替え時にundo/redo履歴をクリア
     this.historyManager.clear();
-    
+
     const scene = this.sceneManager.selectScene(fileName);
     if (!scene) {
       console.error("Scene not found:", fileName);
@@ -1236,6 +1263,10 @@ class ScenarioManager {
     } else {
       this.uiManager.showPlaceholder();
     }
+
+    // シーン切り替え完了後は変更フラグをリセット
+    this.projectManager.markAsSaved();
+    this.updateTitle();
 
     console.log("selecting scene#4");
   }
