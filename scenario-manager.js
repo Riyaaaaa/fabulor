@@ -184,6 +184,7 @@ class ScenarioManager {
     document.getElementById('delete-paragraph').addEventListener('click', () => this.deleteParagraph());
     document.getElementById('new-project').addEventListener('click', () => this.newProject());
     document.getElementById('save-project').addEventListener('click', () => this.saveProject());
+    document.getElementById('close-project').addEventListener('click', () => this.closeProject());
     document.getElementById('open-project').addEventListener('click', () => this.openProject());
     document.getElementById('export-csv').addEventListener('click', () => this.exportCSV());
     document.getElementById('export-text').addEventListener('click', () => this.exportText());
@@ -488,6 +489,61 @@ class ScenarioManager {
       console.error('Open recent project error:', error);
       await window.electronAPI.showMessage({ type: 'error', message: 'プロジェクトを開けませんでした', detail: error.message });
     }
+  }
+
+  async closeProject() {
+    // プロジェクトが開かれていない場合は何もしない
+    if (!this.projectManager.getProjectPath()) {
+      return;
+    }
+
+    // 変更がある場合は確認ダイアログを表示
+    if (this.projectManager.hasChanges()) {
+      const response = await window.electronAPI.showMessage({
+        type: 'question',
+        title: 'プロジェクトを閉じる',
+        message: '保存されていない変更があります。',
+        detail: 'プロジェクトを閉じる前に変更を保存しますか？',
+        buttons: ['保存する', '破棄する', 'キャンセル']
+      });
+
+      if (response === 0) {
+        // 「保存する」を選択
+        await this.saveProject();
+      } else if (response === 2) {
+        // 「キャンセル」を選択
+        return;
+      }
+      // response === 1 の場合は「破棄する」なので何もしない
+    }
+
+    // 編集中の場合は履歴を確定
+    this.finishEdit();
+
+    // 履歴をクリア
+    this.historyManager.clear();
+
+    // プロジェクト状態をクリア
+    this.projectManager.setProjectPath(null);
+    this.projectManager.markAsSaved();
+    this.sceneManager.clearScenes();
+    this.sceneManager.setProjectPath(null);
+    this.paragraphManager.setParagraphs([]);
+
+    // 編集機能を無効化
+    this.setEditingEnabled(false);
+    this.setSceneEditingEnabled(false);
+
+    // UIをリセット
+    this.uiManager.renderSceneList([], null, () => {}, () => {}, () => {});
+    this.uiManager.updateCurrentSceneName('');
+    this.uiManager.renderParagraphList();
+    this.uiManager.showPlaceholder();
+
+    // ホーム画面（最近のプロジェクト一覧）を表示
+    await this.showRecentProjects();
+
+    this.updateTitle();
   }
 
   async newProject() {
@@ -1421,6 +1477,7 @@ class ScenarioManager {
     // 編集関連のボタンを有効/無効化
     const editButtons = [
       'save-project',
+      'close-project',
       'export-csv',
       'export-text',
       'update-localization',
