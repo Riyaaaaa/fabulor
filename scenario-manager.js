@@ -1199,19 +1199,24 @@ class ScenarioManager {
     await this.saveCurrentScene();
     
     const newScene = this.sceneManager.createScene(result.sceneName);
-    // ファイル名を上書き
-    newScene._fileName = result.fileName;
-    
+    const originalFileName = newScene._fileName;
+
+    // ファイル名が異なる場合はMapのキーも更新
+    if (originalFileName !== result.fileName) {
+      this.sceneManager.scenes.delete(originalFileName);
+      newScene._fileName = result.fileName;
+      this.sceneManager.scenes.set(result.fileName, newScene);
+    }
+
     // 空のシーンデータを保存
-    await window.electronAPI.saveScene(projectPath, newScene.id, {
-      id: newScene.id,
+    await window.electronAPI.saveScene(projectPath, newScene._fileName, {
       _fileName: newScene._fileName,
       metadata: '',
       paragraphs: []
     });
-    
-    this.sceneManager.markSceneAsExisting(newScene.id, true);
-    this.sceneManager.selectScene(newScene.id);
+
+    this.sceneManager.markSceneAsExisting(newScene._fileName, true);
+    this.sceneManager.selectScene(newScene._fileName);
     this.paragraphManager.setParagraphs([]);
     
     // シーン編集機能を有効化
@@ -1575,14 +1580,13 @@ class ScenarioManager {
       const newScene = this.sceneManager.createScene(importResult.fileName || 'インポートされたシーン');
       
       // シーンファイルを保存
-      await window.electronAPI.saveScene(projectPath, newScene.id, {
-        id: newScene.id,
+      await window.electronAPI.saveScene(projectPath, newScene._fileName, {
         _fileName: newScene._fileName,
         metadata: '',
         paragraphs: paragraphs
       });
 
-      this.sceneManager.markSceneAsExisting(newScene.id, true);
+      this.sceneManager.markSceneAsExisting(newScene._fileName, true);
       this.sceneManager.selectScene(newScene._fileName);
       this.paragraphManager.setParagraphs(paragraphs);
 
@@ -1699,14 +1703,13 @@ class ScenarioManager {
       const newScene = this.sceneManager.createScene(sceneName);
       
       // シーンファイルを保存
-      await window.electronAPI.saveScene(this.projectManager.getProjectPath(), newScene.id, {
-        id: newScene.id,
+      await window.electronAPI.saveScene(this.projectManager.getProjectPath(), newScene._fileName, {
         _fileName: newScene._fileName,
         metadata: '',
         paragraphs: paragraphs
       });
-      
-      this.sceneManager.markSceneAsExisting(newScene.id, true);
+
+      this.sceneManager.markSceneAsExisting(newScene._fileName, true);
       this.sceneManager.selectScene(newScene._fileName);
       this.paragraphManager.setParagraphs(paragraphs);
       
