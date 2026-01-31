@@ -1,4 +1,6 @@
 // プロジェクト管理モジュール
+import { escapeCSV, rowsToCSV } from './csv-utils.js';
+
 class ProjectManager {
   constructor() {
     this.projectPath = null;
@@ -196,17 +198,17 @@ class ProjectManager {
     paragraphs.forEach(paragraph => {
       const blockType = blockTypeManager.getBlockType(paragraph.type);
       let argCount = 0;
-      
+
       // テキストがある場合は+1
       if (blockType && blockType.requires_text) {
         argCount += 1;
       }
-      
+
       // パラメータ数を追加
       if (blockType && blockType.parameters) {
         argCount += Object.keys(blockType.parameters).length;
       }
-      
+
       maxArgs = Math.max(maxArgs, argCount);
     });
 
@@ -215,54 +217,51 @@ class ProjectManager {
     for (let i = 1; i <= maxArgs; i++) {
       headers.push(`Arg${i}`);
     }
-    
+
     // CSV行を生成
     const rows = [headers];
-    
+
     paragraphs.forEach(paragraph => {
       const row = [];
       const blockType = blockTypeManager.getBlockType(paragraph.type);
-      
+
       // ID
-      row.push(this.escapeCSV(paragraph.id.toString()));
-      
+      row.push(escapeCSV(paragraph.id.toString()));
+
       // Type
-      row.push(this.escapeCSV(paragraph.type));
-      
+      row.push(escapeCSV(paragraph.type));
+
       // Tag
-      row.push(this.escapeCSV(paragraph.tags.join(',')));
-      
+      row.push(escapeCSV(paragraph.tags.join(',')));
+
       // Args（テキスト + パラメータ）を順番に追加
-      
+
       // テキストがある場合は最初のArgとして追加
       if (blockType && blockType.requires_text) {
-        row.push(this.escapeCSV(paragraph.text || ''));
+        row.push(escapeCSV(paragraph.text || ''));
       }
-      
+
       // パラメータを追加
       if (blockType && blockType.parameters) {
         Object.keys(blockType.parameters).forEach(paramKey => {
           const paramDef = blockType.parameters[paramKey];
           const value = paragraph[paramKey] || '';
-          
+
           // struct型の場合は特別な形式で出力
           if (paramDef.type && blockTypeManager.isValidStructType(paramDef.type)) {
             const structValue = this.formatStructForCSV(value, paramDef.type, blockTypeManager);
-            row.push(this.escapeCSV(structValue));
+            row.push(escapeCSV(structValue));
           } else {
-            row.push(this.escapeCSV(value.toString()));
+            row.push(escapeCSV(value.toString()));
           }
         });
       }
-      
-      // 残りの列を空文字で埋めない（行ごとに必要な列数のみ出力）
-      // 注意: これはCSV標準からは逸脱するが、差分を最小化するため
-      
+
       rows.push(row);
     });
-    
+
     // CSV文字列に変換
-    return rows.map(row => row.join(',')).join('\n');
+    return rowsToCSV(rows);
   }
 
   // struct型の値をCSV用の文字列形式に変換
@@ -286,32 +285,6 @@ class ProjectManager {
     });
     
     return pairs.join(';');
-  }
-
-  escapeCSV(value) {
-    if (value === null || value === undefined) {
-      return '';
-    }
-    
-    value = value.toString();
-    
-    // 末尾の改行や空行を除去
-    value = value.replace(/[\n\r\s]*$/, '');
-    
-    // 改行を改行コード文字列に変換
-    value = value.replace(/\r\n/g, '\\r\\n')
-                 .replace(/\n/g, '\\n')
-                 .replace(/\r/g, '\\r');
-    
-    // ダブルクォート、カンマが含まれる場合はエスケープ
-    if (value.includes('"') || value.includes(',')) {
-      // ダブルクォートをエスケープ
-      value = value.replace(/"/g, '""');
-      // 全体をダブルクォートで囲む
-      return `"${value}"`;
-    }
-    
-    return value;
   }
 
   updateTitle() {

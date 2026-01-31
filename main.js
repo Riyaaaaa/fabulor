@@ -6,6 +6,12 @@ const yaml = require('js-yaml');
 let mainWindow;
 let recentProjects = [];
 
+// プロジェクトパスからシーンディレクトリパスを取得するヘルパー関数
+function getScenesDir(projectPath) {
+  const projectBase = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
+  return `${projectBase}_scenes`;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -316,21 +322,20 @@ ipcMain.handle('load-schema-file', async (event, projectPath, schemaFileName) =>
 
 ipcMain.handle('save-scene', async (event, projectPath, fileName, sceneData) => {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenesDir = `${projectDir}_scenes`;
-    
+    const scenesDir = getScenesDir(projectPath);
+
     // scenesディレクトリが存在しない場合は作成
     try {
       await fs.access(scenesDir);
     } catch {
       await fs.mkdir(scenesDir, { recursive: true });
     }
-    
+
     // ファイル名を使用
     const actualFileName = sceneData._fileName || fileName;
     const scenePath = path.join(scenesDir, actualFileName);
     await fs.writeFile(scenePath, JSON.stringify(sceneData, null, 2), 'utf8');
-    
+
     return { success: true, path: scenePath };
   } catch (error) {
     console.error('Scene save error:', error);
@@ -340,12 +345,12 @@ ipcMain.handle('save-scene', async (event, projectPath, fileName, sceneData) => 
 
 ipcMain.handle('load-scene', async (event, projectPath, sceneFileName) => {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenePath = path.join(`${projectDir}_scenes`, sceneFileName);
-    
+    const scenesDir = getScenesDir(projectPath);
+    const scenePath = path.join(scenesDir, sceneFileName);
+
     const sceneContent = await fs.readFile(scenePath, 'utf8');
     const sceneData = JSON.parse(sceneContent);
-    
+
     return { success: true, data: sceneData };
   } catch (error) {
     console.error('Scene load error:', error);
@@ -355,9 +360,9 @@ ipcMain.handle('load-scene', async (event, projectPath, sceneFileName) => {
 
 ipcMain.handle('check-scene-exists', async (event, projectPath, sceneFileName) => {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenePath = path.join(`${projectDir}_scenes`, sceneFileName);
-    
+    const scenesDir = getScenesDir(projectPath);
+    const scenePath = path.join(scenesDir, sceneFileName);
+
     await fs.access(scenePath);
     return { exists: true };
   } catch {
@@ -368,9 +373,8 @@ ipcMain.handle('check-scene-exists', async (event, projectPath, sceneFileName) =
 // scenesディレクトリ内のすべてのシーンファイルを取得
 ipcMain.handle('scan-scenes-directory', async (event, projectPath) => {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenesDir = `${projectDir}_scenes`;
-    
+    const scenesDir = getScenesDir(projectPath);
+
     // ディレクトリが存在するか確認
     try {
       await fs.access(scenesDir);
@@ -378,7 +382,7 @@ ipcMain.handle('scan-scenes-directory', async (event, projectPath) => {
       // ディレクトリが存在しない場合は空の配列を返す
       return { success: true, scenes: [] };
     }
-    
+
     // ディレクトリ内のファイル一覧を取得
     const files = await fs.readdir(scenesDir);
     
@@ -414,9 +418,8 @@ ipcMain.handle('scan-scenes-directory', async (event, projectPath) => {
 
 ipcMain.handle('rename-scene-file', async (event, projectPath, oldFileName, newFileName) => {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenesDir = `${projectDir}_scenes`;
-    
+    const scenesDir = getScenesDir(projectPath);
+
     const oldPath = path.join(scenesDir, oldFileName);
     const newPath = path.join(scenesDir, newFileName);
     
@@ -441,9 +444,9 @@ ipcMain.handle('rename-scene-file', async (event, projectPath, oldFileName, newF
 // シーンファイルを削除
 ipcMain.handle('delete-scene-file', async (event, projectPath, fileName) => {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenePath = path.join(`${projectDir}_scenes`, fileName);
-    
+    const scenesDir = getScenesDir(projectPath);
+    const scenePath = path.join(scenesDir, fileName);
+
     // ファイルが存在する場合は削除
     try {
       await fs.access(scenePath);
@@ -464,16 +467,15 @@ ipcMain.handle('delete-scene-file', async (event, projectPath, fileName) => {
 
 ipcMain.handle('save-new-scene', async (event, projectPath) => {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenesDir = `${projectDir}_scenes`;
-    
+    const scenesDir = getScenesDir(projectPath);
+
     // scenesディレクトリが存在しない場合は作成
     try {
       await fs.access(scenesDir);
     } catch {
       await fs.mkdir(scenesDir, { recursive: true });
     }
-    
+
     const result = await dialog.showSaveDialog(mainWindow, {
       title: '新規シーンを作成',
       defaultPath: path.join(scenesDir, 'New scene.json'),
@@ -625,12 +627,12 @@ ipcMain.handle('export-all-scenes-as-csv', async (event, projectPath, scenes, bl
 // シーンデータを読み込むヘルパー関数
 async function loadSceneData(projectPath, sceneFileName) {
   try {
-    const projectDir = projectPath.replace(/\.[^/.]+$/, ''); // 拡張子を除去
-    const scenePath = path.join(`${projectDir}_scenes`, sceneFileName);
-    
+    const scenesDir = getScenesDir(projectPath);
+    const scenePath = path.join(scenesDir, sceneFileName);
+
     const sceneContent = await fs.readFile(scenePath, 'utf8');
     const sceneData = JSON.parse(sceneContent);
-    
+
     return { success: true, data: sceneData };
   } catch (error) {
     console.error('Scene load error:', error);
@@ -824,13 +826,11 @@ ipcMain.handle('export-all-scenes-as-text', async (event, projectPath, sceneText
         const sanitizedName = scene.name.replace(/[<>:"/\\|?*]/g, '_');
         const fileName = `${sanitizedName}_${formatSuffix}.txt`;
         const filePath = path.join(outputDir, fileName);
-        
+
         await fs.writeFile(filePath, scene.content, 'utf8');
         successCount++;
-        
-        console.log(`テキストエクスポート完了: ${fileName}`);
       } catch (error) {
-        console.error(`シーン \"${scene.name}\" のエクスポート中にエラー:`, error);
+        console.error(`シーン "${scene.name}" のエクスポート中にエラー:`, error);
       }
     }
     
@@ -850,8 +850,6 @@ ipcMain.handle('scan-migration-directory', async (event, projectPath) => {
   try {
     const projectDir = path.dirname(projectPath);
     const migrationDir = path.join(projectDir, 'migration');
-    
-    console.log('マイグレーションディレクトリスキャン:', migrationDir);
     
     // migrationディレクトリの存在確認
     try {
@@ -899,8 +897,6 @@ ipcMain.handle('execute-migration', async (event, projectPath, migrationFileName
     const projectDir = path.dirname(projectPath);
     const migrationPath = path.join(projectDir, 'migration', migrationFileName);
     
-    console.log('マイグレーション実行:', migrationPath);
-    
     // ファイルの存在確認
     try {
       await fs.access(migrationPath);
@@ -919,7 +915,6 @@ ipcMain.handle('execute-migration', async (event, projectPath, migrationFileName
     // initialize関数が存在する場合は実行
     if (typeof migrationModule.initialize === 'function') {
       try {
-        console.log('マイグレーション初期化関数を実行');
         migrationModule.initialize();
       } catch (error) {
         console.error('初期化関数実行エラー:', error);
@@ -948,12 +943,10 @@ ipcMain.handle('execute-migration', async (event, projectPath, migrationFileName
     // finalize関数が存在する場合は実行
     if (typeof migrationModule.finalize === 'function') {
       try {
-        console.log('マイグレーション終了関数を実行');
         migrationModule.finalize();
       } catch (error) {
         console.error('終了関数実行エラー:', error);
         // 終了関数のエラーは警告のみで処理を続行
-        console.warn('終了関数でエラーが発生しましたが、マイグレーション結果は返却します');
       }
     }
 
@@ -967,18 +960,15 @@ ipcMain.handle('execute-migration', async (event, projectPath, migrationFileName
 // YAMLファイル読み込みハンドラー
 ipcMain.handle('load-yaml-file', async (event, yamlPath) => {
   try {
-    console.log('YAML読み込み開始:', yamlPath);
-    
     // 相対パスの場合は絶対パスに変換
     let fullPath = yamlPath;
     if (!path.isAbsolute(yamlPath)) {
       fullPath = path.join(__dirname, yamlPath);
     }
-    
+
     const yamlContent = await fs.readFile(fullPath, 'utf8');
     const data = yaml.load(yamlContent);
-    
-    console.log('YAML読み込み成功:', fullPath);
+
     return { success: true, data: data };
   } catch (error) {
     console.error('YAML読み込みエラー:', error);
@@ -1117,7 +1107,6 @@ ipcMain.handle('update-localization-csv', async (event, projectPath, csvFileName
       existingRecords = parseCSV(csvContent);
     } catch (error) {
       // ファイルが存在しない場合は新規作成
-      console.log(`新規CSVファイル作成: ${csvFileName}`);
     }
 
     // 既存レコードをMapに変換（idをキーとする）

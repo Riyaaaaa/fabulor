@@ -7,25 +7,20 @@ class TextHighlighter {
   // テキストエリアにメタコマンドのハイライトを適用
   highlightTextArea(textArea) {
     if (!textArea) {
-      console.log('TextHighlighter: textArea is null');
       return;
     }
 
     const text = textArea.value;
-    console.log('TextHighlighter: Highlighting text:', text);
-    
     const metaTags = this.metaTagParser.parseMetaTags(text);
-    console.log('TextHighlighter: Found meta tags:', metaTags);
-    
+
     // ハイライト用のオーバーレイ要素を作成/取得
     let overlay = this.getOrCreateOverlay(textArea);
-    
+
     // スタイルを再同期（位置ずれ防止）
     this.syncOverlayStyles(overlay, textArea);
-    
+
     // メタタグがない場合も通常テキストを表示
     this.renderHighlights(overlay, text, metaTags, textArea);
-    console.log('TextHighlighter: Highlighting applied');
   }
 
   // ハイライト用のオーバーレイ要素を取得または作成
@@ -133,8 +128,6 @@ class TextHighlighter {
     textArea.style.backgroundColor = 'transparent';
     textArea.style.color = 'transparent';  // テキストを透明にしてオーバーレイのテキストのみ表示
     textArea.style.caretColor = '#e0e0e0';  // カーソルの色を明示的に設定
-    
-    console.log('...オーバーレイスタイル同期完了');
   }
 
   // ハイライトを描画

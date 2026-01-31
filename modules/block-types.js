@@ -13,20 +13,16 @@ class BlockTypeManager {
 
   async loadSchemaFile(projectPath, schemaFileName) {
     try {
-      console.log("Loading schema file:", schemaFileName);
       const result = await window.electronAPI.loadSchemaFile(projectPath, schemaFileName);
       if (result.success) {
         // enums定義を読み込み
         this.enums = result.data.enums || {};
-        console.log('Loaded enums:', Object.keys(this.enums));
-        
+
         // structs定義を読み込み
         this.structs = result.data.structs || {};
-        console.log('Loaded structs:', Object.keys(this.structs));
-        
+
         // スキーマファイルから読み込んだタイプをそのまま使用
         this.blockTypes = result.data.block_types || {};
-        console.log('Loaded block types:', Object.keys(this.blockTypes));
       } else {
         console.error('スキーマファイルの読み込みに失敗:', result.error);
         await window.electronAPI.showMessage({ type: 'warning', message: `スキーマファイル "${schemaFileName}" の読み込みに失敗しました。`, detail: 'デフォルト設定を使用します。' });

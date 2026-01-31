@@ -1,4 +1,6 @@
 // ローカライゼーション管理モジュール
+import { escapeCSV, rowsToCSV } from './csv-utils.js';
+
 class LocalizationManager {
   constructor() {
     this.projectPath = null;
@@ -151,42 +153,16 @@ class LocalizationManager {
       const existingRecord = existingMap.get(block.id);
 
       const row = [
-        this.escapeCSV(block.id),
-        this.escapeCSV(block.text || ''), // jp列は常に最新のテキストで更新
-        existingRecord ? this.escapeCSV(existingRecord.en || '') : '', // en列は既存値を保持
-        existingRecord ? this.escapeCSV(existingRecord.cn || '') : ''  // cn列は既存値を保持
+        escapeCSV(block.id),
+        escapeCSV(block.text || ''), // jp列は常に最新のテキストで更新
+        existingRecord ? escapeCSV(existingRecord.en || '') : '', // en列は既存値を保持
+        existingRecord ? escapeCSV(existingRecord.cn || '') : ''  // cn列は既存値を保持
       ];
 
       rows.push(row);
     });
 
-    return rows.map(row => row.join(',')).join('\n');
-  }
-
-  /**
-   * CSV値をエスケープ
-   * @param {string} value - エスケープする値
-   * @returns {string} - エスケープされた値
-   */
-  escapeCSV(value) {
-    if (value === null || value === undefined) {
-      return '';
-    }
-
-    value = value.toString();
-
-    // 改行を改行コード文字列に変換
-    value = value.replace(/\r\n/g, '\\r\\n')
-                 .replace(/\n/g, '\\n')
-                 .replace(/\r/g, '\\r');
-
-    // ダブルクォート、カンマが含まれる場合はエスケープ
-    if (value.includes('"') || value.includes(',')) {
-      value = value.replace(/"/g, '""');
-      return `"${value}"`;
-    }
-
-    return value;
+    return rowsToCSV(rows);
   }
 }
 

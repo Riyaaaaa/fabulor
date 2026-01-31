@@ -60,17 +60,15 @@ class ScenarioManager {
     try {
       const success = await this.metaTagParser.loadMetaCommandsFromYaml(metaTagFilePath);
       if (success) {
-        console.log('...メタコマンド定義の読み込み完了:', metaTagFilePath);
         // グローバルフラグを設定してハイライト機能が使用可能であることを示す
         window.metaCommandsLoaded = true;
         // すべてのテキストエリアにハイライトを適用
         this.applyHighlightToAllTextAreas();
       } else {
-        console.warn('...メタコマンド定義の読み込み失敗:', metaTagFilePath);
         window.metaCommandsLoaded = false;
       }
     } catch (error) {
-      console.error('...メタコマンド定義読み込みエラー:', error);
+      console.error('メタコマンド定義読み込みエラー:', error);
       window.metaCommandsLoaded = false;
     }
   }
@@ -95,8 +93,6 @@ class ScenarioManager {
 
   // マイグレーションモーダルを表示
   async showMigrationModal() {
-    console.log('...マイグレーションモーダル表示開始');
-
     if (!this.projectManager.getProjectPath()) {
       await window.electronAPI.showMessage({ message: 'プロジェクトが開かれていません' });
       return;
@@ -104,14 +100,12 @@ class ScenarioManager {
 
     // マイグレーションスクリプト一覧を読み込み
     const migrations = await this.migrationManager.loadAvailableMigrations(this.projectManager.getProjectPath());
-    console.log('...マイグレーション読み込み結果:', migrations);
 
     if (migrations.length === 0) {
       await window.electronAPI.showMessage({ message: 'migrationディレクトリにマイグレーションスクリプトが見つかりません' });
       return;
     }
 
-    console.log('...マイグレーションモーダルを表示');
     this.migrationManager.showMigrationModal();
   }
 
@@ -158,8 +152,6 @@ class ScenarioManager {
       return;
     }
 
-    console.log('...マイグレーション実行開始:', migrationFileName);
-
     try {
       const result = await this.migrationManager.executeMigration(
         this.projectManager.getProjectPath(),
@@ -174,7 +166,7 @@ class ScenarioManager {
         await window.electronAPI.showMessage({ type: 'error', message: 'マイグレーション実行エラー', detail: result.error });
       }
     } catch (error) {
-      console.error('...マイグレーション実行エラー:', error);
+      console.error('マイグレーション実行エラー:', error);
       await window.electronAPI.showMessage({ type: 'error', message: 'マイグレーション実行中にエラーが発生しました', detail: error.message });
     }
   }
@@ -389,11 +381,9 @@ class ScenarioManager {
           const metaTagPath = `${projectDir}/${metaTagFile}`;
           const success = await this.metaTagParser.loadMetaCommandsFromYaml(metaTagPath);
           if (success) {
-            console.log('プロジェクト固有のメタタグ定義を読み込みました:', metaTagFile);
             window.metaCommandsLoaded = true;
             this.applyHighlightToAllTextAreas();
           } else {
-            console.warn('プロジェクト固有のメタタグファイルの読み込みに失敗、デフォルトを使用');
             await this.loadMetaCommands();
           }
         } else {
@@ -403,7 +393,6 @@ class ScenarioManager {
       } catch (error) {
         console.error('メタタグファイル読み込みエラー:', error);
         // メタタグの読み込みに失敗してもプロジェクトは開くことができる
-        console.warn('メタタグ定義の読み込みに失敗、デフォルトを試行');
         await this.loadMetaCommands();
       }
 
@@ -1280,8 +1269,6 @@ class ScenarioManager {
     // UIの選択状態を即座に更新（重い再描画を避ける）
     this.uiManager.updateSceneSelection(fileName);
     this.uiManager.updateCurrentSceneName(scene.name);
-
-    console.log("selecting scene#2");
     
     // シーンのデータをロード
     const projectPath = this.projectManager.getProjectPath();
@@ -1308,8 +1295,6 @@ class ScenarioManager {
       metadataInput.value = scene.metadata || '';
       metadataInput.disabled = false;
     }
-
-    console.log("selecting scene#3");
     
     // 段落リストを更新
     this.uiManager.renderParagraphList();
@@ -1328,8 +1313,6 @@ class ScenarioManager {
     // シーン切り替え完了後は変更フラグをリセット
     this.projectManager.markAsSaved();
     this.updateTitle();
-
-    console.log("selecting scene#4");
   }
 
   async renameScene(fileName, newName) {
